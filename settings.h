@@ -15,54 +15,49 @@ void updateuistyle(void)
 
 void readconf(void)
 {
-	if (home_dir == NULL)
+	config_file_path = g_build_filename(g_get_user_config_dir(), "sgnotes.conf", NULL);
+
+	GKeyFile *key_file;
+	GError *error = NULL;
+
+	key_file = g_key_file_new();
+
+	if (!g_key_file_load_from_file(key_file, config_file_path, G_KEY_FILE_NONE, &error))
 	{
-		g_error("HOME environment variable is not set.");
-		nohome = 1;
+		g_warning("Failed to load configuration file: %s", error->message);
+		g_error_free(error);
+		g_key_file_free(key_file);
 		return;
 	}
-	else
+
+
+	wordwrap = g_key_file_get_integer(key_file, "View", "wordwrap", NULL);
+	fontfamily = g_key_file_get_string(key_file, "View", "fontfamily", NULL);
+	fontsize = g_key_file_get_integer(key_file, "View", "fontsize", NULL);
+	rfontsize = fontsize;
+	fontstyle = g_key_file_get_string(key_file, "View", "fontstyle", NULL);
+	fontweight = g_key_file_get_string(key_file, "View", "fontweight", NULL);
+
+	defworkspace = g_key_file_get_string(key_file, "File", "defworkspace", NULL);
+	permitoverwrite = g_key_file_get_integer(key_file, "File", "permitoverwrite", NULL);
+	autosave = g_key_file_get_integer(key_file, "File", "autosave", NULL);
+	autosaverate = g_key_file_get_integer(key_file, "File", "autosaverate", NULL);
+
+	if (!initialized && defworkspace != NULL)
 	{
-		config_file_path = g_build_filename(g_get_user_config_dir(), "sgnotes.conf", NULL);
-
-		GKeyFile *key_file = g_key_file_new();
-		GError *currenterror = NULL;
-
-		if (!g_key_file_load_from_file(key_file, config_file_path, G_KEY_FILE_NONE, &currenterror))
-		{
-			g_warning("Error loading config file: %s", error->message);
-			g_clear_error(&error);
-			g_key_file_free(key_file);
-			return;
-		}
-
-		wordwrap = g_key_file_get_integer(key_file, "View", "wordwrap", NULL);
-		fontfamily = g_key_file_get_string(key_file, "View", "fontfamily", NULL);
-		fontsize = g_key_file_get_integer(key_file, "View", "fontsize", NULL);
-		rfontsize = fontsize;
-		fontstyle = g_key_file_get_string(key_file, "View", "fontstyle", NULL);
-		fontweight = g_key_file_get_string(key_file, "View", "fontweight", NULL);
-
-		defworkspace = g_key_file_get_string(key_file, "File", "defworkspace", NULL);
-		permitoverwrite = g_key_file_get_integer(key_file, "File", "permitoverwrite", NULL);
-		autosave = g_key_file_get_integer(key_file, "File", "autosave", NULL);
-		autosaverate = g_key_file_get_integer(key_file, "File", "autosaverate", NULL);
-
-		if (!initialized && defworkspace != NULL)
-		{
-			initialized = 1;
-			strncpy(current_workspace, defworkspace, sizeof(current_workspace) - 1);
-			current_workspace[sizeof(current_workspace) - 1] = '\0';
-		}
-		usecsd = g_key_file_get_integer(key_file, "Window", "usecsd", NULL);
-		resizablewidgets = g_key_file_get_integer(key_file, "Window", "resizablewidgets", NULL);
-
-		if (!fcsd)
-		{
-			nocsd = (usecsd == 0);
-		}
-		g_key_file_free(key_file);
+		initialized = 1;
+		strncpy(current_workspace, defworkspace, sizeof(current_workspace) - 1);
+		current_workspace[sizeof(current_workspace) - 1] = '\0';
 	}
+	usecsd = g_key_file_get_integer(key_file, "Window", "usecsd", NULL);
+	resizablewidgets = g_key_file_get_integer(key_file, "Window", "resizablewidgets", NULL);
+
+	if (!fcsd)
+	{
+		nocsd = (usecsd == 0);
+	}
+	g_key_file_free(key_file);
+
 	g_info("wordwrap: %d\nfont: %s\nfontsize: %d\ndefworkspace: %s\npermitoverwrite: %d\nautosave: %d\nautosaverate: %d\nusecsd: %d\nresizablewidgets: %d\n",
 		wordwrap, fontfamily, fontsize, defworkspace, permitoverwrite, autosave, autosaverate, usecsd, resizablewidgets);
 }
