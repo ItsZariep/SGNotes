@@ -1,8 +1,10 @@
 # SGNotes
 
-![SGNotes](https://raw.githubusercontent.com/ItzSelenux/Ilustraciones-icon-theme/main/apps/accessories-notes.svg)
+![SGNotes](src/icons/sgnotes.svg)
 
-Simple GTK Notes App 
+Simple GTK Notes App
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/sgnotes.svg)](https://repology.org/project/sgnotes/versions)
 
 ## Features:
 
@@ -12,21 +14,28 @@ Simple GTK Notes App
 - [x] Side images
 - [x] Autosave
 
-## Build
+<details>
+<summary><strong>Build Instructions</strong></summary>
 
-- Clone this repo:
-  - ```bash
-    git clone https://codeberg.org/ItsZariep/SGNotes
-    ``` 
+```bash
+# Clone the repository
+git clone https://codeberg.org/ItsZariep/SGNotes
+```
+
 - Build
-   - ```bash
-     make
-     ```
-or
-- Build with SourceView (markdown highlight and base SourceView features)
-   - ```bash
-     make WITHSOURCEVIEW=1
-     ```
+
+```bash
+make
+```
+### OR
+
+- Build without SourceView 4 (disables markdown highlight and base SourceView features)
+
+```bash
+make WITHOUTSOURCEVIEW=1
+```
+
+</details>
 
 ## Manual
 See [Online Manual](https://codeberg.org/ItsZariep/SGNotes/wiki/?action=_pages)

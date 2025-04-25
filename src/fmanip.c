@@ -1,18 +1,19 @@
-void on_submenu_item_workspace_selected(void);
-gboolean timeout_callback(gpointer user_data);
+#include "fmanip.h"
 
 void on_save_button_clicked(GtkButton *button, gpointer user_data)
 {
 	//Fix saving empty files
-	if (current_file[0] == '\0')
+	if (current_file[0] == '\0' || saved == 1)
 	{
 		return;
 	}
 
-	gchar *file_path = g_build_filename(home_dir, notes_dir, current_workspace, current_file, NULL);
+	gchar *file_path = g_build_filename(notes_dir, current_workspace, current_file, NULL);
 	FILE *file = fopen(file_path, "w");
 	if (file)
 	{
+		update_status(buffer, GTK_LABEL(status_label));
+		g_custom_message("FManip: [WRITE]", "Writing file: %s", file_path);
 		GtkTextIter start, end;
 		gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(buffer), &start);
 		gtk_text_buffer_get_end_iter(GTK_TEXT_BUFFER(buffer), &end);
@@ -53,47 +54,46 @@ void on_create_new_workspace(GtkButton *button, gpointer voiddialog)
 	if (result == GTK_RESPONSE_ACCEPT)
 	{
 		const gchar *workspace_name = gtk_entry_get_text(GTK_ENTRY(entry));
-
-		workspaces_path = g_build_filename(home_dir, notes_dir, NULL);
-
+		workspaces_path = g_build_filename(notes_dir, NULL);
 		gchar *new_workspace_path = g_build_filename(workspaces_path, workspace_name, NULL);
 
-		if (access(new_workspace_path, F_OK) == 0)
+		if (g_file_test(new_workspace_path, G_FILE_TEST_EXISTS))
 		{
-			GtkWidget *error_dialog = gtk_message_dialog_new
-			(
+			GtkWidget *error_dialog = gtk_message_dialog_new(
 				GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(button))),
 				GTK_DIALOG_MODAL,
 				GTK_MESSAGE_ERROR,
 				GTK_BUTTONS_OK,
 				"A workspace with the name '%s' already exists at '%s'.",
-				workspace_name,
-				new_workspace_path
+				workspace_name, new_workspace_path
 			);
 			gtk_window_set_position(GTK_WINDOW(error_dialog), GTK_WIN_POS_CENTER);
-
 			gtk_dialog_run(GTK_DIALOG(error_dialog));
 			gtk_widget_destroy(error_dialog);
-
 			gtk_widget_destroy(dialog_new_workspace);
-
 			on_create_new_workspace(button, NULL);
 		}
 		else
 		{
-			if (mkdir(new_workspace_path, 0700) == -1)
+			gboolean created = g_mkdir(new_workspace_path, 0700);
+
+			if (created != 0)
 			{
-				perror("Error creating directory");
+				g_printerr("Error creating directory: %s\n", g_strerror(errno));
 			}
 			else
 			{
-				g_print("Workspace '%s' created at '%s'\n", workspace_name, new_workspace_path);
+				g_custom_message("FManip: [WRITE]", "Directory created: %s", new_workspace_path);
+				//g_print("Workspace '%s' created at '%s'\n", workspace_name, new_workspace_path);
 				strncpy(current_workspace, workspace_name, sizeof(current_workspace) - 1);
 				gtk_widget_destroy(dialog_new_workspace);
 				gtk_widget_destroy(workspaces_dialog);
 				restart_program();
 			}
 		}
+
+		g_free(new_workspace_path);
+		g_free(workspaces_path);
 	}
 	else
 	{
@@ -105,8 +105,8 @@ void on_workspace_menu_item_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	if (clicked_workspace != NULL)
 	{
-		gchar *objetive = g_build_filename(home_dir, notes_dir, clicked_workspace, NULL);
-		printf("Workspace selected: %s\n", objetive);
+		gchar *objetive = g_build_filename(notes_dir, clicked_workspace, NULL);
+		g_custom_message("Events", "Candidate directory to delete: %s", objetive);
 
 		dialog = gtk_message_dialog_new
 		(
@@ -126,7 +126,7 @@ void on_workspace_menu_item_activate(GtkMenuItem *menuitem, gpointer user_data)
 		{
 			if (rmdir(objetive) == 0)
 			{
-				g_print("Directory %s removed successfully.\n", objetive);
+				g_custom_message("FManip [DELETE]", "Directory deleted: %s", objetive);
 				gtk_widget_destroy(workspaces_dialog);
 				on_submenu_item_workspace_selected();
 			}
@@ -144,14 +144,18 @@ void on_workspace_menu_item_activate(GtkMenuItem *menuitem, gpointer user_data)
 				gtk_widget_destroy(error_dialog);
 			}
 		}
+		else
+		{
+			g_custom_message("Events", "Operation cancelled, Keeping file: %s", objetive);
+		}
 		g_free(objetive);
 	}
 }
 
 void on_submenu_item_workspace_selected(void)
 {
-	DIR *dir;
-	struct dirent *entry;
+	GDir *dir;
+	const gchar *entry_name;
 
 	GtkWidget *content_area, *tree_view, *scrolled_window;
 	GtkListStore *list_store;
@@ -160,30 +164,34 @@ void on_submenu_item_workspace_selected(void)
 	workspaces_dialog = gtk_dialog_new_with_buttons("Select Workspace",
 		NULL,
 		GTK_DIALOG_MODAL,
-		"_Cancel",
-		GTK_RESPONSE_CANCEL,
-		"_Create New Workspace",
-		GTK_RESPONSE_ACCEPT,
+		"_Cancel", GTK_RESPONSE_CANCEL,
+		"_Create New Workspace", GTK_RESPONSE_ACCEPT,
 		NULL);
 
 	gtk_window_set_position(GTK_WINDOW(workspaces_dialog), GTK_WIN_POS_CENTER);
 	gtk_widget_set_size_request(workspaces_dialog, 333, 333);
 
 	content_area = gtk_dialog_get_content_area(GTK_DIALOG(workspaces_dialog));
-
 	list_store = gtk_list_store_new(1, G_TYPE_STRING);
 
-	if ((dir = opendir(workspaces_path)) != NULL)
+	dir = g_dir_open(workspaces_path, 0, NULL);
+
+	if (dir != NULL)
 	{
-		while ((entry = readdir(dir)) != NULL)
+		while ((entry_name = g_dir_read_name(dir)) != NULL)
 		{
-			if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+			gchar *entry_path = g_build_filename(workspaces_path, entry_name, NULL);
+			if (g_file_test(entry_path, G_FILE_TEST_IS_DIR) &&
+				g_strcmp0(entry_name, ".") != 0 &&
+				g_strcmp0(entry_name, "..") != 0)
 			{
 				gtk_list_store_append(list_store, &iter);
-				gtk_list_store_set(list_store, &iter, 0, entry->d_name, -1);
+				gtk_list_store_set(list_store, &iter, 0, entry_name, -1);
 			}
+			g_free(entry_path);
 		}
-		closedir(dir);
+
+		g_dir_close(dir);
 	}
 
 	tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(list_store));
@@ -193,7 +201,6 @@ void on_submenu_item_workspace_selected(void)
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tree_view), column);
 
 	g_signal_connect(tree_view, "row-activated", G_CALLBACK(on_workspace_row_activated), workspaces_dialog);
-
 	g_signal_connect(tree_view, "button-press-event", G_CALLBACK(on_workspace_button_press), NULL);
 
 	scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -212,28 +219,32 @@ void on_submenu_item_workspace_selected(void)
 	gtk_widget_destroy(workspaces_dialog);
 }
 
+
 void load_file_list(void)
 {
 	GtkTreeViewColumn *column;
 	GtkTreeIter iter;
-	gchar *current_notes_path = g_build_filename(home_dir, notes_dir, current_workspace, NULL);
+	gchar *current_notes_path = g_build_filename(notes_dir, current_workspace, NULL);
 
-	DIR *dir;
-	struct dirent *entry;
+	GDir *dir = g_dir_open(current_notes_path, 0, NULL);
+	const gchar *entry_name;
 
 	filelist_store = gtk_tree_store_new(1, G_TYPE_STRING);
 
-	if ((dir = opendir(current_notes_path)) != NULL)
+	if (dir != NULL)
 	{
-		while ((entry = readdir(dir)) != NULL)
+		g_custom_message("FManip [READ]", "Reading Directory: %s", current_notes_path);
+		while ((entry_name = g_dir_read_name(dir)) != NULL)
 		{
-			if (entry->d_type == DT_REG)
+			gchar *full_path = g_build_filename(current_notes_path, entry_name, NULL);
+			if (g_file_test(full_path, G_FILE_TEST_IS_REGULAR))
 			{
 				gtk_tree_store_append(filelist_store, &iter, NULL);
-				gtk_tree_store_set(filelist_store, &iter, 0, entry->d_name, -1);
+				gtk_tree_store_set(filelist_store, &iter, 0, entry_name, -1);
 			}
+			g_free(full_path);
 		}
-		closedir(dir);
+		g_dir_close(dir);
 	}
 
 	if (GTK_IS_TREE_VIEW(filelist))
@@ -242,47 +253,49 @@ void load_file_list(void)
 		column = gtk_tree_view_column_new_with_attributes("File Name", filelist_renderer, "text", 0, NULL);
 		gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
 	}
-	g_object_unref(imglist_store);
+
+	g_object_unref(filelist_store);
 	g_free(current_notes_path);
 }
 
-int remove_recursive(const gchar *path)
+
+gint remove_recursive(const gchar *path)
 {
-	struct dirent *entry;
-	DIR *dir = opendir(path);
+	GDir *dir = g_dir_open(path, 0, NULL);
+	const gchar *entry_name;
 
 	if (!dir)
 	{
 		return -1;
 	}
 
-	while ((entry = readdir(dir)))
+	while ((entry_name = g_dir_read_name(dir)) != NULL)
 	{
-		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+		gchar *full_path = g_build_filename(path, entry_name, NULL);
+		if (g_file_test(full_path, G_FILE_TEST_IS_DIR))
 		{
-			gchar *full_path = g_build_filename(path, entry->d_name, NULL);
-			if (entry->d_type == DT_DIR)
+			if (remove_recursive(full_path) != 0)
 			{
-				if (remove_recursive(full_path) != 0)
-				{
-					closedir(dir);
-					return -1; 
-				}
-			}
-			else 
-			{
-				if (remove(full_path) != 0)
-				{
-					closedir(dir);
-					return -1; 
-				}
+				g_free(full_path);
+				g_dir_close(dir);
+				return -1;
 			}
 		}
+		else
+		{
+			if (g_remove(full_path) != 0)
+			{
+				g_free(full_path);
+				g_dir_close(dir);
+				return -1;
+			}
+		}
+		g_free(full_path);
 	}
 
-	closedir(dir);
+	g_dir_close(dir);
 
-	if (rmdir(path) != 0)
+	if (g_rmdir(path) != 0)
 	{
 		return -1;
 	}
@@ -290,18 +303,21 @@ int remove_recursive(const gchar *path)
 	return 0;
 }
 
-void delete_current_file(void)
+void delete_current_file(gchar *file_path)
 {
 	if (current_file[0] == '\0')
 	{
 		return;
 	}
+	g_custom_message("FManip [DELETE]", "File asd: %s", current_file);
 
-	gchar *file_path = g_build_filename(home_dir, notes_dir, current_workspace, current_file, NULL);
-	gchar *data_path = g_build_filename(home_dir, notes_dir, current_workspace, current_file, "_files", NULL);
+
+	//gchar *file_path = g_build_filename(notes_dir, current_workspace, current_file, NULL);
+	gchar *data_path = g_build_filename(notes_dir, current_workspace, current_file, "_files", NULL);
 
 	if (remove(file_path) == 0)
 	{
+		g_custom_message("FManip [DELETE]", "File deleted: %s", file_path);
 		gtk_text_buffer_set_text(buffer, "", -1);
 		current_file[0] = '\0';
 
@@ -316,12 +332,13 @@ void delete_current_file(void)
 	}
 	else
 	{
+		g_custom_message("FManip [DELETE]", "File deleted: %s", file_path);
 		GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(window), 
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, 
 			GTK_MESSAGE_ERROR, 
 			GTK_BUTTONS_OK, 
 			"Can't delete file: '%s'", 
-			current_file);
+			file_path);
 
 		gtk_window_set_position(GTK_WINDOW(error_dialog), GTK_WIN_POS_CENTER);
 		gtk_window_set_title(GTK_WINDOW(error_dialog), "Error deleting file");
@@ -331,11 +348,11 @@ void delete_current_file(void)
 
 	if (remove_recursive(data_path) == 0)
 	{
-		g_print("Directory removed: %s\n", data_path);
+		g_custom_message("FManip [DELETE]", "Directory deleted: %s", data_path);
 	}
 	else
 	{
-		g_print("Error deleting data path, maybe this note doesn't have pictures\n");
+		g_custom_message("FManip [ERROR]", "Error deleting directory: %s, maybe this note doesn't have pictures", data_path);
 	}
 }
 
@@ -376,6 +393,9 @@ void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 			GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
 			"Are you sure you want to delete '%s'?", selected_value);
 
+		gchar *file_path = g_build_filename(notes_dir, current_workspace, selected_value, NULL);
+		g_custom_message("Events", "Candidate File to delete: %s", selected_value);
+
 		gtk_window_set_title(GTK_WINDOW(dialog), "WARNING");
 		gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
 
@@ -384,9 +404,13 @@ void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 
 		if (response == GTK_RESPONSE_YES)
 		{
-			delete_current_file();
+			delete_current_file(file_path);
 			saved = 1;
 			gtk_widget_activate(submenu_item_closefile);
+		}
+		else
+		{
+			g_custom_message("Events", "Operation cancelled, Keeping file: %s", file_path);
 		}
 		g_free(selected_value);
 	}
@@ -394,75 +418,101 @@ void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 
 void on_export_button_clicked(GtkButton *button, gpointer user_data)
 {
-	if (current_file[0] == '\0')
+	GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist));
+	GtkTreeIter iter;
+
+	if (!gtk_tree_selection_get_selected(selection, (GtkTreeModel **)&filelist_store, &iter))
 	{
 		return;
 	}
 
-	gchar *file_path = g_build_filename(home_dir, notes_dir, current_workspace, current_file, NULL);
-	//gchar *data_path = g_build_filename(home_dir, notes_dir, current_workspace, g_strdup_printf("%s_files", current_file), NULL);
+	gchar *selected_value;
+	gtk_tree_model_get(GTK_TREE_MODEL(filelist_store), &iter, 0, &selected_value, -1);
+	
+	GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(filelist_store), &iter);
+	gtk_tree_view_row_activated(GTK_TREE_VIEW(filelist), path, gtk_tree_view_get_column(GTK_TREE_VIEW(filelist), 0));
+	gtk_tree_path_free(path);
+	
+	g_strlcpy(current_file, selected_value, sizeof(current_file));
 
-	GtkWidget *file_chooser_dialog;
-	file_chooser_dialog = gtk_file_chooser_dialog_new("Select Destination",
-		GTK_WINDOW(window),
-		GTK_FILE_CHOOSER_ACTION_SAVE,
-		"_Cancel", GTK_RESPONSE_CANCEL,
-		"_Save", GTK_RESPONSE_ACCEPT,
-		NULL);
+	gchar *file_path = g_build_filename(notes_dir, current_workspace, current_file, NULL);
+
+	if (!g_file_test(file_path, G_FILE_TEST_EXISTS))
+	{
+		GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(window),
+														 GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+														 GTK_MESSAGE_ERROR,
+														 GTK_BUTTONS_OK,
+														 "Selected file '%s' does not exist.", file_path);
+		gtk_dialog_run(GTK_DIALOG(error_dialog));
+		gtk_widget_destroy(error_dialog);
+
+		g_free(selected_value);
+		g_free(file_path);
+		return;
+	}
+
+	GtkWidget *file_chooser_dialog = gtk_file_chooser_dialog_new("Export File As",
+																 GTK_WINDOW(window),
+																 GTK_FILE_CHOOSER_ACTION_SAVE,
+																 "_Cancel", GTK_RESPONSE_CANCEL,
+																 "_Save", GTK_RESPONSE_ACCEPT,
+																 NULL);
 
 	if (gtk_dialog_run(GTK_DIALOG(file_chooser_dialog)) == GTK_RESPONSE_ACCEPT)
 	{
 		GtkFileChooser *chooser = GTK_FILE_CHOOSER(file_chooser_dialog);
 		gchar *destination_file = gtk_file_chooser_get_filename(chooser);
-		GError *currenterror = NULL;
+		GError *copy_error = NULL;
 
-		if (g_file_test(file_path, G_FILE_TEST_EXISTS))
+		GFile *src_file = g_file_new_for_path(file_path);
+		GFile *dst_file = g_file_new_for_path(destination_file);
+
+		if (g_file_copy(src_file,
+						dst_file,
+						G_FILE_COPY_OVERWRITE,
+						NULL,
+						NULL,
+						NULL,
+						&copy_error))
 		{
-			if (g_file_copy(g_file_new_for_path(file_path),
-				g_file_new_for_path(destination_file),
-				G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, &currenterror))
-			{
-				GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window),
-					GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-					GTK_MESSAGE_INFO,
-					GTK_BUTTONS_OK,
-					"File copied successfully to '%s'.", destination_file);
-				gtk_dialog_run(GTK_DIALOG(success_dialog));
-				gtk_widget_destroy(success_dialog);
-			}
-			else
-			{
-				GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(window),
-					GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-					GTK_MESSAGE_ERROR,
-					GTK_BUTTONS_OK,
-					"Failed to copy file: %s", error->message);
-				gtk_dialog_run(GTK_DIALOG(error_dialog));
-				gtk_widget_destroy(error_dialog);
-				g_error_free(currenterror);
-			}
+			GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window),
+															   GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+															   GTK_MESSAGE_INFO,
+															   GTK_BUTTONS_OK,
+															   "File exported successfully to '%s'.", destination_file);
+			gtk_dialog_run(GTK_DIALOG(success_dialog));
+			gtk_widget_destroy(success_dialog);
 		}
 		else
 		{
 			GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(window),
-				GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-				GTK_MESSAGE_ERROR,
-				GTK_BUTTONS_OK,
-				"Source file '%s' does not exist.", file_path);
+															 GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+															 GTK_MESSAGE_ERROR,
+															 GTK_BUTTONS_OK,
+															 "Failed to export file: %s", copy_error->message);
 			gtk_dialog_run(GTK_DIALOG(error_dialog));
 			gtk_widget_destroy(error_dialog);
+			g_error_free(copy_error);
 		}
+
+		g_object_unref(src_file);
+		g_object_unref(dst_file);
 		g_free(destination_file);
 	}
+
 	gtk_widget_destroy(file_chooser_dialog);
+	g_free(file_path);
+	g_free(selected_value);
 }
+
 
 void save_file(const gchar *filename)
 {
 	gchar *full_path;
 	FILE *file;
 
-	gchar *dir_path = g_build_filename(home_dir, ".local", "share", "sgnotes", current_workspace, NULL);
+	gchar *dir_path = g_build_filename(notes_dir, current_workspace, NULL);
 	if (!g_file_test(dir_path, G_FILE_TEST_EXISTS))
 		g_mkdir_with_parents(dir_path, 0700);
 
@@ -486,7 +536,7 @@ void saveToFile(const gchar *text)
 	gchar *full_path;
 	FILE *file;
 	gint note_overwrite = 0;
-	gchar *dir_path = g_build_filename(home_dir, ".local", "share", "sgnotes", current_workspace, NULL);
+	gchar *dir_path = g_build_filename(notes_dir, current_workspace, NULL);
 
 	if (!g_file_test(dir_path, G_FILE_TEST_EXISTS))
 	{
@@ -638,7 +688,7 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 			gtk_widget_destroy(rename_dialog);
 			return;
 		}
-		g_autofree gchar *dir_path = g_build_filename(home_dir, ".local", "share", "sgnotes", current_workspace, NULL);
+		g_autofree gchar *dir_path = g_build_filename(notes_dir, current_workspace, NULL);
 
 		if (!g_file_test(dir_path, G_FILE_TEST_EXISTS))
 		{
@@ -742,7 +792,7 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 	gtk_widget_destroy(rename_dialog);
 }
 
-static void submenu_item_newnote_selected(GtkWidget *widget, gpointer data)
+void submenu_item_newnote_selected(GtkWidget *widget, gpointer data)
 {
 	GtkWidget *content_area, *entry;
 	gint result;

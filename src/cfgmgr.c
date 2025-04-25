@@ -1,3 +1,22 @@
+#include "cfgmgr.h"
+
+GtkWidget *scrolled_treeview;
+GtkWidget *treeview;
+GtkWidget *wintitle;
+GtkWidget *search_entry;
+GtkWidget *next_button;
+GtkWidget *prev_button;
+GtkWidget *gwordwrap;
+GtkWidget *gfont;
+GtkWidget *gdefworkspace;
+GtkWidget *gpermitoverwrite;
+GtkWidget *gautosave;
+GtkWidget *gautosaverate;
+GtkWidget *gautosaverate_label;
+GtkWidget *gusecsd;
+GtkWidget *gresizablewidgets;
+
+gchar notes_path[8192];
 void toggleautosave(void)
 {
 	if (gtk_widget_get_visible(gautosaverate)) 
@@ -24,6 +43,7 @@ void showcfg(void)
 	{
 		return;
 	}
+
 	visiblecfgmgr = 1;
 	dialog = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(dialog), "Settings - SGNotes");
@@ -34,78 +54,111 @@ void showcfg(void)
 	g_signal_connect(dialog, "destroy", G_CALLBACK(closecfg), dialog);
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
 
-	GtkWidget *defbtn, *applybtn;
+	GtkWidget *defbtn;
+	GtkWidget *okbtn;
+	GtkWidget *cancelbtn;
+	GtkWidget *applybtn;
 
 	GtkWidget *notebook = gtk_notebook_new();
+
 		GtkWidget *viewgrid = gtk_grid_new();
 			gtk_grid_set_row_spacing(GTK_GRID(viewgrid), 5);
 			gtk_grid_set_column_homogeneous(GTK_GRID(viewgrid), TRUE);
 
-			gwordwrap = gtk_check_button_new();
+			GtkWidget *gfont_label = gtk_label_new("Font");
+				gtk_label_set_xalign(GTK_LABEL(gfont_label), XA);
+				gtk_widget_set_margin_start(GTK_WIDGET(gfont_label), XM);
 			gfont = gtk_font_button_new();
 				gtk_font_button_set_show_style(GTK_FONT_BUTTON(gfont), FALSE);
+			gwordwrap = gtk_check_button_new_with_label("Word wrap");
+				gtk_widget_set_direction(gwordwrap, GTK_TEXT_DIR_RTL);
+
 
 		GtkWidget *filegrid = gtk_grid_new();
 			gtk_grid_set_row_spacing(GTK_GRID(filegrid), 5);
 			gtk_grid_set_column_homogeneous(GTK_GRID(filegrid), TRUE);
 
+			GtkWidget *gdefworkspace_label = gtk_label_new("Default Workspace");
+				gtk_label_set_xalign(GTK_LABEL(gdefworkspace_label), XA);
+				gtk_widget_set_margin_start(GTK_WIDGET(gdefworkspace_label), XM);
 			gdefworkspace = gtk_combo_box_text_new();
-				struct dirent *entry;
-				DIR *dir;
-				if ((dir = opendir(workspaces_path)) != NULL)
+				GDir *dir = g_dir_open(workspaces_path, 0, NULL);
+
+				if (dir != NULL)
 				{
-					while ((entry = readdir(dir)) != NULL)
+					const gchar *filename;
+
+					while ((filename = g_dir_read_name(dir)) != NULL)
 					{
-						if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+						gchar *fullpath = g_build_filename(workspaces_path, filename, NULL);
+
+						if (g_file_test(fullpath, G_FILE_TEST_IS_DIR) &&
+							g_strcmp0(filename, ".") != 0 &&
+							g_strcmp0(filename, "..") != 0)
 						{
-							gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(gdefworkspace), NULL, entry->d_name);
+							gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(gdefworkspace), NULL, filename);
 						}
+
+						g_free(fullpath);
 					}
-					closedir(dir);
+
+					g_dir_close(dir);
 				}
-				gtk_combo_box_set_active(GTK_COMBO_BOX(gdefworkspace), 0);
-			gpermitoverwrite = gtk_check_button_new();
-			gautosave = gtk_check_button_new();
-			GtkAdjustment *gautosaverate_adjustment = gtk_adjustment_new(1, 0, 60, 1, 1, 0); 
+
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gdefworkspace), 0);
+			gpermitoverwrite = gtk_check_button_new_with_label("Permit overwrite");
+				gtk_widget_set_direction(gpermitoverwrite, GTK_TEXT_DIR_RTL);
+			gautosave = gtk_check_button_new_with_label("Auto save");
+				gtk_widget_set_direction(gautosave, GTK_TEXT_DIR_RTL);
+			gautosaverate_label = gtk_label_new("Autosave Rate");
+				gtk_label_set_xalign(GTK_LABEL(gautosaverate_label), XA);
+				gtk_widget_set_margin_start(GTK_WIDGET(gautosaverate_label), XM);
+				GtkAdjustment *gautosaverate_adjustment = gtk_adjustment_new(1, 1, 60, 1, 1, 0);
 				gautosaverate = gtk_spin_button_new(gautosaverate_adjustment, 1, 0);
 
 		GtkWidget *windowgrid = gtk_grid_new();
 			gtk_grid_set_row_spacing(GTK_GRID(windowgrid), 10);
 			gtk_grid_set_column_homogeneous(GTK_GRID(windowgrid), TRUE);
 
-			gusecsd = gtk_check_button_new();
-			gresizablewidgets = gtk_check_button_new();
-
+			gusecsd = gtk_check_button_new_with_label("Use CSD Decoration");
+				gtk_widget_set_direction(gusecsd, GTK_TEXT_DIR_RTL);
+			gresizablewidgets = gtk_check_button_new_with_label("Resizable elements\n(Experimental)");
+				gtk_widget_set_direction(gresizablewidgets, GTK_TEXT_DIR_RTL);
 			GtkWidget *applybox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
 				defbtn = gtk_button_new_with_label("Default");
+					GtkStyleContext *defbtn_context = gtk_widget_get_style_context(defbtn);
+					gtk_style_context_add_class(defbtn_context, "destructive-action");
+				okbtn  = gtk_button_new_with_label("OK");
+					GtkStyleContext *okbtn_context = gtk_widget_get_style_context(okbtn);
+					gtk_style_context_add_class(okbtn_context, "suggested-action");
+				cancelbtn  = gtk_button_new_with_label("Cancel");
 				applybtn  = gtk_button_new_with_label("Apply");
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), viewgrid, gtk_label_new("View"));
-		gtk_grid_attach(GTK_GRID(viewgrid), gtk_label_new("Word Wrap"), 0, 0, 1, 1);
-			gtk_grid_attach(GTK_GRID(viewgrid), gwordwrap, 1, 0, 1, 1);
-		gtk_grid_attach(GTK_GRID(viewgrid), gtk_label_new("Font"), 0, 2, 1, 1);
-			gtk_grid_attach(GTK_GRID(viewgrid), gfont, 1, 2, 1, 1);
+		gtk_grid_attach(GTK_GRID(viewgrid), gfont_label, 0, 0, 1, 1);
+			gtk_grid_attach(GTK_GRID(viewgrid), gfont, 1, 0, 1, 1);
+		gtk_grid_attach(GTK_GRID(viewgrid), gwordwrap, 0, 1, 2, 1);
+
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), filegrid, gtk_label_new("File"));
-		gtk_grid_attach(GTK_GRID(filegrid), gtk_label_new("Default Workspace"), 0, 0, 1, 1);
+		gtk_grid_attach(GTK_GRID(filegrid),gdefworkspace_label, 0, 0, 1, 1);
 			gtk_grid_attach(GTK_GRID(filegrid), gdefworkspace, 1, 0, 1, 1);
-		gtk_grid_attach(GTK_GRID(filegrid), gtk_label_new("Permit Overwrite"), 0, 1, 1, 1);
-			gtk_grid_attach(GTK_GRID(filegrid), gpermitoverwrite, 1, 1, 1, 1);
-		gtk_grid_attach(GTK_GRID(filegrid), gtk_label_new("Autosave"), 0, 2, 1, 1);
-			gtk_grid_attach(GTK_GRID(filegrid), gautosave, 1, 2, 1, 1);
-		gautosaverate_label = gtk_label_new("Autosave Rate");
-			gtk_grid_attach(GTK_GRID(filegrid), gautosaverate_label, 0, 3, 1, 1);
+		gtk_grid_attach(GTK_GRID(filegrid), gpermitoverwrite, 0, 1, 2, 1);
+		gtk_grid_attach(GTK_GRID(filegrid), gautosave, 0, 2, 2, 1);
+		gtk_grid_attach(GTK_GRID(filegrid), gautosaverate_label, 0, 3, 1, 1);
 			gtk_grid_attach(GTK_GRID(filegrid), gautosaverate, 1, 3, 1, 1);
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), windowgrid, gtk_label_new("Window"));
 		gtk_grid_attach(GTK_GRID(windowgrid), gtk_label_new("NOTE: These options require restarting SGNotes"), 0, 0, 2, 1);
-		gtk_grid_attach(GTK_GRID(windowgrid), gtk_label_new("Use CSD Decoration"), 0, 1, 1, 1);
-			gtk_grid_attach(GTK_GRID(windowgrid), gusecsd, 1, 1, 1, 1);
-		gtk_grid_attach(GTK_GRID(windowgrid), gtk_label_new("Resizable elements\n(Experimental)"), 0, 2, 1, 1);
-			gtk_grid_attach(GTK_GRID(windowgrid), gresizablewidgets, 1, 2, 1, 1);
+			gtk_grid_attach(GTK_GRID(windowgrid), gusecsd, 0, 1, 2, 1);
+		gtk_grid_attach(GTK_GRID(windowgrid), gresizablewidgets, 0, 2, 2, 1);
 
+		gtk_box_pack_start(GTK_BOX(applybox), defbtn, FALSE, FALSE, 2);
 		gtk_box_pack_end(GTK_BOX(applybox), applybtn, FALSE, FALSE, 2);
-		gtk_box_pack_end(GTK_BOX(applybox), defbtn, FALSE, FALSE, 2);
+		gtk_box_pack_end(GTK_BOX(applybox), cancelbtn, FALSE, FALSE, 2);
+		gtk_box_pack_end(GTK_BOX(applybox), okbtn, FALSE, FALSE, 2);
+
+		
 
 	GtkWidget *confbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 1);
 	gtk_box_pack_start(GTK_BOX(confbox), notebook, TRUE, TRUE, 2);
@@ -145,7 +198,8 @@ void showcfg(void)
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gautosaverate), autosaverate);
 
 	g_signal_connect(gautosave, "clicked", G_CALLBACK(toggleautosave), NULL);
-
-	g_signal_connect(applybtn, "clicked", G_CALLBACK(updateconf), GINT_TO_POINTER(0));
 	g_signal_connect(defbtn, "clicked", G_CALLBACK(updateconf), GINT_TO_POINTER(1));
+	g_signal_connect(okbtn, "clicked", G_CALLBACK(updateconf), GINT_TO_POINTER(0));
+	g_signal_connect(cancelbtn, "clicked", G_CALLBACK(closecfg), NULL);
+	g_signal_connect(applybtn, "clicked", G_CALLBACK(updateconf), GINT_TO_POINTER(2));
 }

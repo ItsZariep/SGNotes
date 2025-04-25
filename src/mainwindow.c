@@ -1,19 +1,71 @@
+#include "mainwindow.h"
+
+GtkIconTheme *theme;
+GtkIconInfo *info;
+GdkPixbuf *icon;
+GtkAccelGroup *accel_group;
+GtkCellRenderer *filelist_renderer;
+GtkListStore *imglist_store;
+GtkTreeStore *filelist_store;
+GtkTextMark *last_found = NULL;
+GtkTextBuffer *buffer;
+
+GtkWidget *window;
+GtkWidget *mainbutton;
+GtkWidget *workspaces_dialog;
+GtkWidget *submenu_item_workspace;
+GtkWidget *submenu_item_newnote;
+GtkWidget *submenu_filelist_item2;
+GtkWidget *sidebar_left;
+GtkWidget *sidebar_center;
+GtkWidget *textbox_container;
+GtkWidget *submenu_item_closefile;
+GtkWidget *submenu_filelist_item3;
+GtkWidget *submenu_imglist_item3;
+GtkWidget *grid;
+GtkWidget *filelist;
+GtkWidget *text_view;
+GtkWidget *textbox_grid;
+GtkWidget *submenu_item_save;
+GtkWidget *imgbox;
+GtkWidget *submenu_item_zoomreset;
+GtkWidget *submenu_item_zoomout;
+GtkWidget *submenu_item_zoomin;
+GtkWidget *save_button;
+GtkWidget *rename_button;
+GtkWidget *delete_button;
+GtkWidget *pic_button;
+GtkWidget *scrolled_list;
+GtkWidget *scrolled_txt;
+GtkWidget *paned_horiz1;
+GtkWidget *paned_horiz2;
+GtkWidget *dialog;
+GtkWidget *submenu_item_wordwrap;
+GtkWidget *status_label;
+GtkWidget *submenu_imglist_item2;
+
+GPtrArray *program_icon_names;
+
+
+
+gchar *markup_buffer = NULL;
+
 void on_submenu_item_about_selected(GtkMenuItem *menuitem, gpointer userdata)
 {
 	dialog = gtk_about_dialog_new();
 		window_set_icon(GTK_WINDOW(dialog), program_icon);
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(dialog), "SGNotes");
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), pver);
-	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog), "Copyright © 2024 ItsZariep");
-	#ifdef WITHSOURCEVIEW
-	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog), "Simple GTK Notes\nThis build uses GTK SourceView");
+	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog), "Copyright © 2025 ItsZariep");
+	#ifndef WITHOUTSOURCEVIEW
+	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog), "Simple GTK Notes\nThis build uses GTK SourceView 4");
 	#else
-	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog), "Simple GTK Notes");
+	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog), "Simple GTK Notes\nThis build does NOT uses GTK SourceView 4");
 	#endif
 	gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(dialog), "https://codeberg.org/ItsZariep/SGNotes");
 	gtk_about_dialog_set_website_label(GTK_ABOUT_DIALOG(dialog), "Project WebSite");
 	gtk_about_dialog_set_license_type(GTK_ABOUT_DIALOG(dialog),GTK_LICENSE_GPL_3_0);
-	gtk_about_dialog_set_logo_icon_name(GTK_ABOUT_DIALOG(dialog),program_icon);
+	gtk_about_dialog_set_logo_icon_name(GTK_ABOUT_DIALOG(dialog), program_icon);
 	gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);
 }
@@ -165,14 +217,14 @@ void create_window(void)
 
 	GtkWidget *submenu_imglist = gtk_menu_new();
 		GtkWidget *submenu_imglist_item1 = gtk_menu_item_new_with_label("Open Picture");
-		GtkWidget *submenu_imglist_item2 = gtk_menu_item_new_with_label("Delete Picture");
+		submenu_imglist_item2 = gtk_menu_item_new_with_label("Delete Picture");
 			gtk_menu_shell_append(GTK_MENU_SHELL(submenu_imglist), submenu_imglist_item1);
 			gtk_menu_shell_append(GTK_MENU_SHELL(submenu_imglist), submenu_imglist_item2);
 	gtk_widget_show_all(submenu_imglist);
 
 	grid = gtk_grid_new();
 	gtk_container_add(GTK_CONTAINER(window), mainvbox);
-	gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+	//gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
 
 	scrolled_list = gtk_scrolled_window_new(NULL, NULL);
@@ -182,15 +234,16 @@ void create_window(void)
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_txt), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
 		filelist_renderer = gtk_cell_renderer_text_new();
-			//g_object_set(filelist_renderer, "wrap-width", 64, NULL);
-			//g_object_set(filelist_renderer, "wrap-mode", 2, NULL);
+			g_object_set(filelist_renderer, "wrap-width", 64, NULL);
+			g_object_set(filelist_renderer, "wrap-mode", 2, NULL);
 		filelist = gtk_tree_view_new();
 			gtk_tree_view_set_activate_on_single_click(GTK_TREE_VIEW(filelist), TRUE);
 			gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(filelist), FALSE);
 			gtk_tree_view_set_show_expanders(GTK_TREE_VIEW(filelist), FALSE);
 
 			gtk_container_add(GTK_CONTAINER(scrolled_list), filelist);
-		text_view = gtk_source_view_new();
+			text_view = gtk_source_view_new();
+
 			gtk_container_add(GTK_CONTAINER(scrolled_txt), text_view);
 			if (wordwrap == 1)
 			{
@@ -218,12 +271,22 @@ void create_window(void)
 		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_treeview), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 		gtk_widget_set_size_request(scrolled_treeview, 100, 150);
 
+		g_assert(text_view != NULL);
 		buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view));
-		#ifdef WITHSOURCEVIEW
+
+		status_label = gtk_label_new("Welcome to SGNotes");
+			gtk_label_set_xalign(GTK_LABEL(status_label), XA);
+			gtk_widget_set_margin_start(GTK_WIDGET(status_label), XM);
+
+		g_signal_connect(buffer, "changed", G_CALLBACK(on_cursor_moved), status_label);
+		g_signal_connect(buffer, "mark-set", G_CALLBACK(on_cursor_moved), status_label);
+
+		#ifndef WITHOUTSOURCEVIEW
 			GtkSourceLanguageManager *language_manager = gtk_source_language_manager_get_default();
 			GtkSourceLanguage *language = gtk_source_language_manager_get_language(language_manager, "markdown");
 			gtk_source_buffer_set_language(GTK_SOURCE_BUFFER(buffer), language);
 		#endif
+
 		rename_button = gtk_button_new_with_label("Rename");
 		delete_button = gtk_button_new_with_label("Delete Note");
 		pic_button = gtk_button_new_with_label("Add Picture");
@@ -254,6 +317,7 @@ void create_window(void)
 		textbox_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 			gtk_container_add(GTK_CONTAINER(textbox_container), scrolled_txt);
 			gtk_container_add(GTK_CONTAINER(textbox_container), textbox_grid);
+			gtk_container_add(GTK_CONTAINER(textbox_container), status_label);
 
 		if (resizablewidgets)
 		{
@@ -263,7 +327,6 @@ void create_window(void)
 				gtk_paned_pack1(GTK_PANED(paned_horiz2), textbox_container, TRUE, FALSE);
 				gtk_paned_pack2(GTK_PANED(paned_horiz2), imgbox, TRUE, FALSE); 
 				gtk_paned_pack2(GTK_PANED(paned_horiz1), paned_horiz2, TRUE, FALSE);
-
 			gtk_container_add(GTK_CONTAINER(mainvbox), paned_horiz1);
 		}
 		else
@@ -343,7 +406,7 @@ void create_window(void)
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
 	gtk_widget_show_all(window);
-	snprintf(markup_buffer, sizeof(markup_buffer), "%s - SGNotes", current_workspace);
+	markup_buffer = g_strdup_printf("%s - SGNotes", current_workspace);
 	gtk_window_set_title(GTK_WINDOW(window), markup_buffer);
 
 	gtk_widget_hide(textbox_container);
@@ -368,3 +431,4 @@ void restart_program(void)
 	readconf();
 	create_window();
 }
+

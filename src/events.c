@@ -1,12 +1,20 @@
-void load_file_content(const char *filename);
-void restart_program(void);
-static void on_submenu_imglist_item1_selected(void);
-void on_workspace_menu_item_activate(GtkMenuItem *menuitem, gpointer user_data);
-void add_images_from_directory(GtkWidget *widget, gpointer user_data);
-void on_delete_button_clicked(GtkButton *button, gpointer user_data);
-void on_rename_button_clicked(GtkButton *button, gpointer user_data);
-void on_export_button_clicked(GtkButton *button, gpointer user_data);
-void on_save_button_clicked(GtkButton *button, gpointer user_data);
+#include "events.h"
+
+gchar *program_icon;
+
+void updateuistyle(void)
+{
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view), (wordwrap == 0) ? GTK_WRAP_NONE : GTK_WRAP_WORD_CHAR);
+		GtkCssProvider *provider = gtk_css_provider_new();
+		gchar *css = g_strdup_printf("textview { font-family: \"%s\"; font-size: %dpt; font-style: %s; font-weight: %s; }", 
+			fontfamily, fontsize, fontstyle, fontweight);
+		gtk_css_provider_load_from_data(provider, css, -1, NULL);
+		g_free(css);
+		gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
+		GTK_STYLE_PROVIDER(provider),
+		GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+		g_object_unref(provider);
+}
 
 gchar* probe_icons_from_theme(GPtrArray *icon_names)
 {
@@ -22,6 +30,7 @@ gchar* probe_icons_from_theme(GPtrArray *icon_names)
 			icon = gtk_icon_info_load_icon(info, NULL);
 			if (icon != NULL)
 			{
+				g_custom_message("Events:", "Program icon found as: %s", icon_name);
 				g_object_unref(icon);
 				g_object_unref(info);
 				return g_strdup(icon_name);
@@ -43,7 +52,6 @@ void window_set_icon(GtkWindow *target, gchar *iconname)
 
 gint show_warning_dialog(const gchar *message)
 {
-
 	dialog = gtk_message_dialog_new(NULL, 
 		GTK_DIALOG_MODAL, 
 		GTK_MESSAGE_WARNING, 
@@ -72,41 +80,59 @@ gint show_warning_dialog(const gchar *message)
 gint show_file_warning(void)
 {
 	gint result;
-	gchar warning_message[8192];
+	gchar *warning_message;
 
-	snprintf(warning_message, sizeof(warning_message), "\"%s\" file is modified, if you close it your changes will be lost", current_file);
+	warning_message = g_strdup_printf("\"%s\" file is modified, if you close it your changes will be lost", current_file);
 
-	dialog = gtk_message_dialog_new(NULL, 
+	GtkWidget *warning_dialog = gtk_message_dialog_new(NULL, 
 		GTK_DIALOG_MODAL, 
 		GTK_MESSAGE_QUESTION, 
-		GTK_BUTTONS_NONE,
+		GTK_BUTTONS_NONE, 
 		"%s", 
 		warning_message);
 
-	gtk_dialog_add_button(GTK_DIALOG(dialog), "_Save", GTK_RESPONSE_ACCEPT);
-	gtk_dialog_add_button(GTK_DIALOG(dialog), "_Close without Saving", GTK_RESPONSE_REJECT);
-	gtk_dialog_add_button(GTK_DIALOG(dialog), "_Cancel", GTK_RESPONSE_CANCEL);
+	GtkWidget *save_button = gtk_dialog_add_button(GTK_DIALOG(warning_dialog), "_Save", GTK_RESPONSE_ACCEPT);
+	GtkStyleContext *savebtn_context = gtk_widget_get_style_context(save_button);
+	gtk_style_context_add_class(savebtn_context, "suggested-action");
 
-	gtk_window_set_title(GTK_WINDOW(dialog), "Confirmation");
-	gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
+	gtk_dialog_add_button(GTK_DIALOG(warning_dialog), "_Cancel", GTK_RESPONSE_CANCEL);
 
-	gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+	GtkWidget *close_button = gtk_dialog_add_button(GTK_DIALOG(warning_dialog), "_Close without Saving", GTK_RESPONSE_REJECT);
+	GtkStyleContext *closebtn_context = gtk_widget_get_style_context(close_button);
+	gtk_style_context_add_class(closebtn_context, "destructive-action");
 
-	switch (response)
+	gtk_window_set_title(GTK_WINDOW(warning_dialog), "Confirmation");
+	gtk_window_set_position(GTK_WINDOW(warning_dialog), GTK_WIN_POS_CENTER);
+
+	gint response;
+
+	while (TRUE)
 	{
-		case GTK_RESPONSE_ACCEPT:
-			result = 1;
-			break;
-		case GTK_RESPONSE_REJECT:
-			result = 2;
-			break;
-		case GTK_RESPONSE_CANCEL:
-		default:
-			result = 0;
-			break;
+		response = gtk_dialog_run(GTK_DIALOG(warning_dialog));
+
+		switch (response)
+		{
+			case GTK_RESPONSE_ACCEPT:
+				result = 1;
+				gtk_widget_destroy(warning_dialog);
+				return result;
+
+			case GTK_RESPONSE_REJECT:
+				if (show_warning_dialog("Are you sure?\nALL YOUR CHANGES WILL BE LOST") == 1)
+				{
+					result = 2;
+					gtk_widget_destroy(warning_dialog);
+					return result;
+				}
+				break;
+
+			case GTK_RESPONSE_CANCEL:
+			default:
+				result = 0;
+				gtk_widget_destroy(warning_dialog);
+				return result;
+		}
 	}
-	gtk_widget_destroy(dialog);
-	return result;
 }
 
 void show_error_dialog(const gchar *message)
@@ -123,19 +149,21 @@ void togglesave(GtkWidget *widget, gpointer data)
 	if ((autosave == 1 && autosaverate != 0) || autosave == 0) 
 	{
 		saved = GPOINTER_TO_INT(data);
-
 		if (!cooldown)
 		{
+			update_status(buffer, GTK_LABEL(status_label));
 			if (saved)
 			{
-				snprintf(markup_buffer, sizeof(markup_buffer), "%s/%s - SGNotes", current_workspace,current_file);
+				markup_buffer = g_strdup_printf("%s/%s - SGNotes", current_workspace, current_file);
 			}
 			else
 			{
-				snprintf(markup_buffer, sizeof(markup_buffer), "*%s/%s - SGNotes", current_workspace,current_file);
+				markup_buffer = g_strdup_printf("*%s/%s - SGNotes", current_workspace, current_file);
 			}
 
 			gtk_window_set_title(GTK_WINDOW(window), markup_buffer);
+			g_free(markup_buffer);
+
 			//gchar *css;
 			//GtkCssProvider *provider = gtk_css_provider_new();
 			//if (!saved)
@@ -168,7 +196,7 @@ gboolean timeout_callback(gpointer user_data)
 	return G_SOURCE_CONTINUE;
 }
 
-static gboolean on_workspace_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+gboolean on_workspace_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
 	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
@@ -212,7 +240,7 @@ static gboolean on_workspace_button_press(GtkWidget *widget, GdkEventButton *eve
 	return FALSE;
 }
 
-static gboolean filelist_element_showmenu(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+gboolean filelist_element_showmenu(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
 	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
@@ -247,7 +275,7 @@ static gboolean filelist_element_showmenu(GtkWidget *widget, GdkEventButton *eve
 			GtkWidget *menu_item_export = gtk_menu_item_new_with_label("Export");
 			gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_rename);
 			gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_delete);
-			//gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_export);
+			gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_export);
 			gtk_widget_show_all(menu);
 
 			g_signal_connect(menu_item_delete, "activate", G_CALLBACK(on_delete_button_clicked), NULL);
@@ -338,7 +366,7 @@ void on_close_file(GtkWidget *widget, gpointer data)
 	gtk_widget_set_sensitive(submenu_item_zoomreset, FALSE);
 	gtk_widget_set_sensitive(submenu_item_zoomout, FALSE);
 
-	snprintf(markup_buffer, sizeof(markup_buffer), "%s - SGNotes", current_workspace);
+	markup_buffer = g_strdup_printf("%s - SGNotes", current_workspace);
 	gtk_window_set_title(GTK_WINDOW(window), markup_buffer);
 
 	gtk_widget_hide(textbox_grid);
@@ -428,7 +456,7 @@ gboolean on_list_press(GtkWidget *widget, GdkEventButton *event, gpointer data)
 	return FALSE;
 }
 // Entry dialogs behavior
-static gboolean on_entry_key_press(GtkWidget *widget, GdkEventKey *event, GtkDialog *input)
+gboolean on_entry_key_press(GtkWidget *widget, GdkEventKey *event, GtkDialog *input)
 {
 	if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter)
 	{
@@ -438,7 +466,7 @@ static gboolean on_entry_key_press(GtkWidget *widget, GdkEventKey *event, GtkDia
 	return FALSE;
 }
 
-static void on_entry_changed(GtkEditable *editable, gpointer user_data)
+void on_entry_changed(GtkEditable *editable, gpointer user_data)
 {
 	GtkWidget *entry = GTK_WIDGET(editable);
 	const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry));
@@ -471,7 +499,7 @@ void on_filelist_item_selected(gpointer user_data)
 	GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist));
 	GtkTreeModel *model;
 	GtkTreeIter iter;
-	char *filename;
+	gchar *filename;
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
@@ -491,10 +519,16 @@ void on_filelist_item_selected(gpointer user_data)
 		gtk_widget_set_sensitive(submenu_item_zoomout, TRUE);
 		gtk_widget_set_size_request(scrolled_list, 100, 150);
 		gtk_widget_set_hexpand(scrolled_list, FALSE);
+
 		load_file_content(filename);
+
+		g_strlcpy(current_file, filename, sizeof(current_file));
+
 		add_images_from_directory(GTK_WIDGET(treeview), user_data);
 
-			snprintf(markup_buffer, sizeof(markup_buffer), "%s/%s - SGNotes", current_workspace,current_file);
+			markup_buffer = g_strdup_printf("%s/%s - SGNotes", current_workspace, current_file);
+			g_object_set_data(G_OBJECT(text_view), "filename", current_file);
+
 			gtk_window_set_title(GTK_WINDOW(window), markup_buffer);
 
 		if (resizablewidgets && !fromfile)
@@ -508,6 +542,7 @@ void on_filelist_item_selected(gpointer user_data)
 	saved = 1;
 	fromfile = 1;
 	cooldown = 0;
+	update_status(buffer, GTK_LABEL(status_label));
 }
 
 gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer data)
@@ -520,7 +555,7 @@ gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer d
 		{
 			gchar *path_string = gtk_tree_path_to_string(path);
 			selfromtreeview = atoi(path_string);
-			g_print("Picture selected: %d\n", selfromtreeview);
+			g_custom_message("Events", "Picture selected: %d", selfromtreeview);
 			GtkWidget *submenu = GTK_WIDGET(data);
 			gtk_menu_popup_at_pointer(GTK_MENU(submenu), NULL);
 			g_free(path_string);
@@ -536,7 +571,7 @@ gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer d
 		{
 			gchar *path_string = gtk_tree_path_to_string(path);
 			selfromtreeview = atoi(path_string);
-			g_print("Picture selected: %d\n", selfromtreeview);
+			g_custom_message("Events", "Picture selected: %d", selfromtreeview);
 			on_submenu_imglist_item1_selected();
 			g_free(path_string);
 			gtk_tree_path_free(path);
@@ -555,7 +590,7 @@ gboolean on_listbox_clicked(GtkWidget *listbox, GdkEventButton *event, gpointer 
 		if (row != NULL)
 		{
 			selfromlistbox = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(row), "index"));
-			g_print("Picture selected: %d\n", selfromlistbox);
+			g_custom_message("Events", "Picture selected: %d", selfromtreeview);
 			GtkWidget *submenu = GTK_WIDGET(data);
 			gtk_menu_popup_at_pointer(GTK_MENU(submenu), NULL);
 			return TRUE;
@@ -567,7 +602,7 @@ gboolean on_listbox_clicked(GtkWidget *listbox, GdkEventButton *event, gpointer 
 		if (row != NULL)
 		{
 			selfromlistbox = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(row), "index"));
-			g_print("Picture selected: %d\n", selfromlistbox);
+			g_custom_message("Events", "Picture selected: %d", selfromtreeview);
 			on_submenu_imglist_item1_selected();
 			return TRUE;
 		}
@@ -603,4 +638,49 @@ gboolean quit_handler(void)
 		return FALSE;
 	}
 	return FALSE;
+}
+
+void custom_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+	gint64 now_us = g_get_real_time();
+
+	time_t seconds = (time_t)(now_us / G_USEC_PER_SEC);
+	gint milliseconds = (gint)((now_us % G_USEC_PER_SEC) / 1000);
+
+	struct tm *tm_info = localtime(&seconds);
+
+	gchar time_buffer[32];
+
+	if (tm_info != NULL)
+	{
+		strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S", tm_info);
+
+		size_t len = strlen(time_buffer);
+		snprintf(time_buffer + len, sizeof(time_buffer) - len, ".%03d", milliseconds);
+	}
+	else
+	{
+		strncpy(time_buffer, "??:??:??.???", sizeof(time_buffer));
+		time_buffer[sizeof(time_buffer) - 1] = '\0';
+	}
+
+	const gchar *prefix = (const gchar *)user_data;
+
+	g_print("** \033[0;32m%s\033[0m: \033[0;34m%s\033[0m: %s\n", prefix, time_buffer, message);
+}
+
+void g_custom_message(const gchar *prefix, const gchar *format, ...)
+{
+	if (verbose == 1)
+	{
+		va_list args;
+		va_start(args, format);
+
+		gchar *formatted_message = g_strdup_vprintf(format, args);
+		va_end(args);
+
+		g_log_set_handler(NULL, G_LOG_LEVEL_MESSAGE, (GLogFunc) custom_log_handler, (gpointer) prefix);
+		g_message("%s", formatted_message);
+		g_free(formatted_message);
+	}
 }
