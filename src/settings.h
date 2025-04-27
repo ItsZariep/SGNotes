@@ -28,6 +28,9 @@ extern guint cooldown;
 extern guint visiblecfgmgr;
 extern guint timeout_id;
 extern guint fromfile;
+extern guint hideimgs;
+extern guint wrapfilelist;
+
 extern gchar *notes_dir;
 extern gchar *workspaces_path;
 
@@ -41,10 +44,14 @@ extern gchar *program_icon;
 extern gchar *config_file_path;
 extern gchar *workspaces_path;
 
+#ifndef WITHOUTSOURCEVIEW
+extern guint linenumbers;
+extern guint highlightline;
+extern gchar *editortheme;
+#endif
+
 void updateuistyle(void);
 void readconf(void);
 void updateconf(GtkWidget *widget, gpointer data);
-
-
 
 #endif

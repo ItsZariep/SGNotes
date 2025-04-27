@@ -4,6 +4,7 @@ gchar *program_icon;
 
 void updateuistyle(void)
 {
+	if (current_file[0] != '\0') { gtk_widget_set_visible(imgbox, !hideimgs);}
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view), (wordwrap == 0) ? GTK_WRAP_NONE : GTK_WRAP_WORD_CHAR);
 		GtkCssProvider *provider = gtk_css_provider_new();
 		gchar *css = g_strdup_printf("textview { font-family: \"%s\"; font-size: %dpt; font-style: %s; font-weight: %s; }", 
@@ -14,6 +15,16 @@ void updateuistyle(void)
 		GTK_STYLE_PROVIDER(provider),
 		GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 		g_object_unref(provider);
+
+	#ifndef WITHOUTSOURCEVIEW
+		GtkSourceStyleSchemeManager *style_scheme_manager;
+		GtkSourceStyleScheme *style_scheme;
+		style_scheme_manager = gtk_source_style_scheme_manager_get_default();
+		style_scheme = gtk_source_style_scheme_manager_get_scheme(style_scheme_manager, editortheme);
+		gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(buffer), style_scheme);
+			gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(text_view), linenumbers);
+			gtk_source_view_set_highlight_current_line(GTK_SOURCE_VIEW(text_view), highlightline);
+	#endif
 }
 
 gchar* probe_icons_from_theme(GPtrArray *icon_names)
@@ -286,6 +297,10 @@ gboolean filelist_element_showmenu(GtkWidget *widget, GdkEventButton *event, gpo
 
 			return TRUE;
 		}
+		else
+		{
+			gtk_menu_popup_at_pointer(GTK_MENU(submenu_filelist), NULL);
+		}
 	}
 	return FALSE;
 }
@@ -499,15 +514,16 @@ void on_filelist_item_selected(gpointer user_data)
 	GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist));
 	GtkTreeModel *model;
 	GtkTreeIter iter;
+	gchar *aaaa;
 	gchar *filename;
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
-		gtk_tree_model_get(model, &iter, 0, &filename, -1);
+		gtk_tree_model_get(model, &iter, 0, &aaaa, 1, &filename, -1);
 
 		gtk_widget_show(textbox_container);
 		gtk_widget_hide(textbox_grid);
-		gtk_widget_show(imgbox);
+		gtk_widget_set_visible(imgbox, !hideimgs);
 
 		gtk_widget_set_sensitive(submenu_item_save, TRUE);
 		gtk_widget_set_sensitive(submenu_imglist_item3, TRUE);
@@ -562,10 +578,19 @@ gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer d
 			gtk_tree_path_free(path);
 			return TRUE;
 		}
+		else
+		{
+			GtkWidget *submenu = gtk_menu_new();
+				GtkWidget *submenu_item1 = gtk_menu_item_new_with_label("Show pictures folder in file manager");
+				gtk_menu_shell_append(GTK_MENU_SHELL(submenu), submenu_item1);
+				g_signal_connect(submenu_item1, "activate", G_CALLBACK(on_img_empty_selected), NULL);
+			gtk_widget_show_all(submenu);
+			gtk_menu_popup_at_pointer(GTK_MENU(submenu), NULL);
+		}
 	}
 	else if (event->button == 1)
 	{
-			GtkTreePath *path = NULL;
+		GtkTreePath *path = NULL;
 		GtkTreeViewColumn *column = NULL;
 		if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(input), (gint)event->x, (gint)event->y, &path, &column, NULL, NULL))
 		{
@@ -578,7 +603,7 @@ gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer d
 			return TRUE;
 		}
 	}
-	
+
 	return TRUE;
 }
 

@@ -13,7 +13,6 @@ GOptionEntry entries[] =
 	{NULL}
 };
 
-
 int main(int argc, char *argv[])
 {
 	const gchar *env_sgcsd = g_getenv("SGCSD");

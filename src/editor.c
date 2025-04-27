@@ -9,6 +9,7 @@ void update_status(GtkTextBuffer *input, GtkLabel *label)
 	gint column;
 	gchar *status;
 	gchar *savedtext;
+	gchar *savedchar;
 
 	gtk_text_buffer_get_iter_at_mark(input, &iter, gtk_text_buffer_get_insert(input));
 
@@ -22,14 +23,28 @@ void update_status(GtkTextBuffer *input, GtkLabel *label)
 	if (saved == 1)
 	{
 		savedtext = "<span foreground=\"green\">Saved</span>";
+		savedchar = " ";
 	}
 	else
 	{
 		savedtext = "<span foreground=\"red\">Unsaved</span>";
+		savedchar = "*";
 	}
 
 	status = g_strdup_printf("%s (%s)\nLine: %d  Col: %d  Total Chars: %d", buffername, savedtext, line + 1, column + 1, total_chars);
 	gtk_label_set_markup(label, status);
+
+	GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist));
+	GtkTreeModel *model;
+	GtkTreeIter treeiter;
+
+	if (!gtk_tree_selection_get_selected(selection, &model, &treeiter))
+	{
+		return;
+	}
+
+	gtk_tree_store_set(GTK_TREE_STORE(model), &treeiter, 0, savedchar, 1, buffername, -1);
+
 	g_free(status);
 }
 
@@ -159,7 +174,8 @@ void next_button_clicked(GtkWidget *input)
 
 void load_file_content(gchar *filename)
 {
-	gchar *file_path = g_build_filename(notes_dir, current_workspace, filename, NULL);
+	gchar *input = g_strdup_printf("%s.md", filename);
+	gchar *file_path = g_build_filename(notes_dir, current_workspace, input, NULL);
 
 	GError *error = NULL;
 	GIOChannel *channel = g_io_channel_new_file(file_path, "r", &error);
@@ -198,12 +214,4 @@ void load_file_content(gchar *filename)
 	showfind = 0;
 	gtk_widget_hide(textbox_grid);
 	gtk_widget_grab_focus(GTK_WIDGET(text_view));
-
-		//GtkSourceStyleSchemeManager *style_scheme_manager;
-		//GtkSourceStyleScheme *style_scheme;
-		//style_scheme_manager = gtk_source_style_scheme_manager_get_default();
-		//style_scheme = gtk_source_style_scheme_manager_get_scheme(style_scheme_manager, "oblivion");
-		//gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(buffer), style_scheme);
-			//gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(text_view), TRUE);
-			//gtk_source_view_set_highlight_current_line(GTK_SOURCE_VIEW(text_view), TRUE);
 }

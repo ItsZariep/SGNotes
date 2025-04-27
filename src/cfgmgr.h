@@ -23,6 +23,14 @@ extern GtkWidget *gautosaverate;
 extern GtkWidget *gautosaverate_label;
 extern GtkWidget *gusecsd;
 extern GtkWidget *gresizablewidgets;
+extern GtkWidget *gwrapfilelist;
+extern GtkWidget *ghideimgs;
+
+#ifndef WITHOUTSOURCEVIEW
+	extern GtkWidget *glinenumbers;
+	extern GtkWidget *ghighlightline;
+	extern GtkWidget *geditortheme;
+#endif
 
 void toggleautosave(void);
 void closecfg(void);

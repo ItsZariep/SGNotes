@@ -8,7 +8,8 @@ void on_save_button_clicked(GtkButton *button, gpointer user_data)
 		return;
 	}
 
-	gchar *file_path = g_build_filename(notes_dir, current_workspace, current_file, NULL);
+	gchar *output = g_strdup_printf("%s.md",current_file);
+	gchar *file_path = g_build_filename(notes_dir, current_workspace, output, NULL);
 	FILE *file = fopen(file_path, "w");
 	if (file)
 	{
@@ -226,23 +227,47 @@ void load_file_list(void)
 	GtkTreeIter iter;
 	gchar *current_notes_path = g_build_filename(notes_dir, current_workspace, NULL);
 
+	if (current_notes_path == NULL || g_strcmp0(current_workspace, "") == 0)
+	{
+		strncpy(current_workspace, "Default", sizeof(current_workspace) - 1);
+		current_notes_path = g_build_filename(notes_dir, current_workspace, NULL);
+		if (g_mkdir_with_parents(current_notes_path, 0755) != 0)
+		{
+			g_warning("Failed to create directory: %s", current_notes_path);
+		}
+	}
+
 	GDir *dir = g_dir_open(current_notes_path, 0, NULL);
 	const gchar *entry_name;
 
-	filelist_store = gtk_tree_store_new(1, G_TYPE_STRING);
+	filelist_store = gtk_tree_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
 
 	if (dir != NULL)
 	{
 		g_custom_message("FManip [READ]", "Reading Directory: %s", current_notes_path);
 		while ((entry_name = g_dir_read_name(dir)) != NULL)
 		{
-			gchar *full_path = g_build_filename(current_notes_path, entry_name, NULL);
-			if (g_file_test(full_path, G_FILE_TEST_IS_REGULAR))
+			if (g_str_has_suffix(entry_name, ".md"))
 			{
-				gtk_tree_store_append(filelist_store, &iter, NULL);
-				gtk_tree_store_set(filelist_store, &iter, 0, entry_name, -1);
+				gchar *full_path = g_build_filename(current_notes_path, entry_name, NULL);
+				if (g_file_test(full_path, G_FILE_TEST_IS_REGULAR))
+				{
+					gchar *basename = g_strdup(entry_name);
+					gchar *dot = strrchr(basename, '.');
+					if (dot != NULL)
+					{
+						*dot = '\0';
+					}
+
+					gchar *column_char = " ";
+
+					gtk_tree_store_append(filelist_store, &iter, NULL);
+					gtk_tree_store_set(filelist_store, &iter, 0, column_char, 1, basename, -1);
+
+					g_free(basename);
+				}
+				g_free(full_path);
 			}
-			g_free(full_path);
 		}
 		g_dir_close(dir);
 	}
@@ -250,14 +275,31 @@ void load_file_list(void)
 	if (GTK_IS_TREE_VIEW(filelist))
 	{
 		gtk_tree_view_set_model(GTK_TREE_VIEW(filelist), GTK_TREE_MODEL(filelist_store));
-		column = gtk_tree_view_column_new_with_attributes("File Name", filelist_renderer, "text", 0, NULL);
+
+		GtkCellRenderer *renderer_char = gtk_cell_renderer_text_new();
+		column = gtk_tree_view_column_new_with_attributes("Char", renderer_char, "text", 0, NULL);
 		gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
+
+		GtkCellRenderer *renderer_filename = gtk_cell_renderer_text_new();
+		column = gtk_tree_view_column_new_with_attributes("File Name", renderer_filename, "text", 1, NULL);
+		gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
+	}
+
+	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(filelist));
+	gboolean has_entries = gtk_tree_model_get_iter_first(model, &iter);
+
+	if (!has_entries)
+	{
+		gtk_widget_show(newnote_button);
+	}
+	else
+	{
+		gtk_widget_hide(newnote_button);
 	}
 
 	g_object_unref(filelist_store);
 	g_free(current_notes_path);
 }
-
 
 gint remove_recursive(const gchar *path)
 {
@@ -311,9 +353,8 @@ void delete_current_file(gchar *file_path)
 	}
 	g_custom_message("FManip [DELETE]", "File asd: %s", current_file);
 
-
-	//gchar *file_path = g_build_filename(notes_dir, current_workspace, current_file, NULL);
-	gchar *data_path = g_build_filename(notes_dir, current_workspace, current_file, "_files", NULL);
+	gchar *datafolder = g_strdup_printf("%s_files", current_file);
+	gchar *data_path = g_build_filename(notes_dir, current_workspace, datafolder, NULL);
 
 	if (remove(file_path) == 0)
 	{
@@ -382,7 +423,8 @@ void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 	if (gtk_tree_selection_get_selected(selection, (GtkTreeModel **)&filelist_store, &iter))
 	{
 		gchar *selected_value;
-		gtk_tree_model_get(GTK_TREE_MODEL(filelist_store), &iter, 0, &selected_value, -1);
+		gchar *current_file_saved;
+		gtk_tree_model_get(GTK_TREE_MODEL(filelist_store), &iter, 0, &current_file_saved, 1, &selected_value, -1);
 			GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(filelist_store), &iter);
 			gtk_tree_view_row_activated(GTK_TREE_VIEW(filelist), path, gtk_tree_view_get_column(GTK_TREE_VIEW(filelist), 0));
 			gtk_tree_path_free(path);
@@ -404,7 +446,8 @@ void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 
 		if (response == GTK_RESPONSE_YES)
 		{
-			delete_current_file(file_path);
+			gchar *realfilepath = g_strdup_printf("%s.md", file_path);
+			delete_current_file(realfilepath);
 			saved = 1;
 			gtk_widget_activate(submenu_item_closefile);
 		}
@@ -591,7 +634,10 @@ void saveToFile(const gchar *text)
 		{
 			GtkTreeIter iter;
 			gtk_tree_store_append(filelist_store, &iter, NULL);
-			gtk_tree_store_set(filelist_store, &iter, 0, text, -1);
+			gchar *basename = g_path_get_basename(text);
+			gchar *dot = g_strrstr(basename, ".");
+			if (dot != NULL) {*dot = '\0';}
+			gtk_tree_store_set(filelist_store, &iter, 0," ", 1, basename, -1);
 
 			GtkTreeIter first_iter;
 			if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(filelist_store), &first_iter))
@@ -649,7 +695,8 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 	}
 
 	g_autofree gchar *selected_value = NULL;
-	gtk_tree_model_get(model, &iter, 0, &selected_value, -1);
+	gchar *dummy;
+	gtk_tree_model_get(model, &iter, 0, &dummy, 1, &selected_value, -1);
 
 	GtkTreePath *path = gtk_tree_model_get_path(model, &iter);
 	gtk_tree_view_row_activated(GTK_TREE_VIEW(filelist), path, gtk_tree_view_get_column(GTK_TREE_VIEW(filelist), 0));
@@ -658,6 +705,8 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 	const gchar *text = "";
 	g_autofree gchar *output = NULL;
 	g_autofree gchar *input = NULL;
+	g_autofree gchar *input_imgs = NULL;
+	g_autofree gchar *output_imgs = NULL;
 	g_autofree gchar *imgoutput = NULL;
 	g_autofree gchar *imginput = NULL;
 
@@ -695,7 +744,9 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 			g_mkdir_with_parents(dir_path, 0700);
 		}
 
-		output = g_build_filename(dir_path, text, NULL);
+		gchar *outputpath = g_strdup_printf("%s.md", text);
+		output = g_build_filename(dir_path, outputpath, NULL);
+		output_imgs = g_build_filename(dir_path, text, NULL);
 
 		if (g_file_test(output, G_FILE_TEST_EXISTS))
 		{
@@ -729,14 +780,16 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 			}
 		}
 
-		input = g_build_filename(dir_path, current_file, NULL);
+		gchar *realcurrentfile = g_strdup_printf("%s.md", current_file);
+		input = g_build_filename(dir_path, realcurrentfile, NULL);
+		input_imgs = g_build_filename(dir_path, current_file, NULL);
 
-		gchar img_path[255];
-		strcpy(img_path, input);
+		gchar img_path[512];
+		strcpy(img_path, input_imgs);
 		strcat(img_path, "_files");
 
-		gchar img_path2[255];
-		strcpy(img_path2, output);
+		gchar img_path2[512];
+		strcpy(img_path2, output_imgs);
 		strcat(img_path2, "_files");
 
 		imginput = g_strdup(img_path);
@@ -744,8 +797,8 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 
 		if (rename(input, output) == 0)
 		{
-			g_print("File moved successfully: %s > %s\n", input, output);
-			gtk_tree_store_set(GTK_TREE_STORE(model), &iter, 0, text, -1);
+			g_custom_message("FManip: [WRITE]", "File moved successfully: %s > %s\n", input, output);
+			gtk_tree_store_set(GTK_TREE_STORE(model), &iter, 0, " ", 1, text, -1);
 		}
 		else
 		{
@@ -821,11 +874,14 @@ void submenu_item_newnote_selected(GtkWidget *widget, gpointer data)
 	if (result == GTK_RESPONSE_OK)
 	{
 		const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry));
-		saveToFile(text);
+		gchar *filename = g_strdup_printf("%s.md", text);
+		saveToFile(filename);
+		g_free(filename);
 	}
 	else if (result == GTK_RESPONSE_CANCEL)
 	{
 		g_print("\n");
 	}
 	gtk_widget_destroy(dialog);
+	gtk_widget_hide(newnote_button);
 }

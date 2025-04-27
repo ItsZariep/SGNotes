@@ -1,7 +1,5 @@
 # SGNotes
 
-![SGNotes](src/icons/sgnotes.svg)
-
 Simple GTK Notes App
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/sgnotes.svg)](https://repology.org/project/sgnotes/versions)

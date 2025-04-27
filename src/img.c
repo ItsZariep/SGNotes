@@ -128,6 +128,38 @@ void add_image(GtkWidget *widget, gpointer user_data)
 	gtk_widget_destroy(dialog);
 }
 
+void on_img_empty_selected(void)
+{
+	gchar *file_path = NULL;
+
+	gchar *dir_path = g_build_filename(notes_dir, current_workspace, NULL);
+	gchar *file_dir = g_strdup_printf("%s_files", current_file);
+	file_path = g_build_filename(dir_path, file_dir, NULL);
+
+	error = NULL;
+	gchar *uri = g_filename_to_uri(file_path, NULL, &error);
+
+	if (uri != NULL)
+	{
+		if (!g_app_info_launch_default_for_uri(uri, NULL, &error))
+		{
+			g_printerr("Error opening directory: %s\n", error->message);
+			g_error_free(error);
+		}
+
+		g_free(uri);
+	}
+	else
+	{
+		g_printerr("Error converting path to URI: %s\n", error->message);
+		g_error_free(error);
+	}
+
+	g_free(dir_path);
+	g_free(file_dir);
+	g_free(file_path);
+}
+
 void on_submenu_imglist_item1_selected(void)
 {
 	gchar *file_path = NULL;

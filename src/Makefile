@@ -9,7 +9,14 @@ ifeq ($(WITHOUTSOURCEVIEW),1)
 	SOURCEVIEWARG = -DWITHOUTSOURCEVIEW
 endif
 
-CFLAGS = `pkg-config --cflags gtk+-3.0 $(SOURCEVIEW)` -Dpver=\"$(VERSION)\" $(SOURCEVIEWARG)
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S), Linux)
+	CFLAGS = `pkg-config --cflags gtk+-3.0 $(SOURCEVIEW)` -Dpver=\"$(VERSION)\" $(SOURCEVIEWARG)
+else
+	CFLAGS = `pkg-config --cflags gtk+-3.0 $(SOURCEVIEW)` -Dpver=\"$(VERSION)\" $(SOURCEVIEWARG) -mwindows -O2
+endif
+
 LIBS = `pkg-config --libs gtk+-3.0 $(SOURCEVIEW)`
 SRC = events.c fmanip.c img.c settings.c cfgmgr.c editor.c mainwindow.c sgnotes.c 
 OBJ = $(SRC:.c=.o)
@@ -34,12 +41,14 @@ test:
 install:
 	install -Dm755 $(EXE) $(BIN_DIR)/$(EXE)
 	install -Dm644 $(EXE).desktop $(APP_DIR)/$(EXE).desktop
-	install -Dm644 icons/$(EXE).svg $(ICON_DIR)/$(EXE).svg
+	install -Dm644 share/icons/hicolor/scalable/apps/$(EXE).svg $(ICON_DIR)/$(EXE).svg
+	install -Dm644 share/gtksourceview-4/styles/zarium.xml $(PREFIX)/share/gtksourceview-4/styles/zarium.xml
 
 uninstall:
 	rm -f $(BIN_DIR)/$(EXE)
 	rm -f $(APP_DIR)/$(EXE).desktop
 	rm -f $(ICON_DIR)/$(EXE).svg
+	rm -f $(PREFIX)/share/gtksourceview-4/styles/zarium.xml
 
 clean:
 	rm -f $(OBJ) $(EXE) debug

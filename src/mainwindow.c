@@ -13,6 +13,7 @@ GtkTextBuffer *buffer;
 GtkWidget *window;
 GtkWidget *mainbutton;
 GtkWidget *workspaces_dialog;
+GtkWidget *submenu_filelist;
 GtkWidget *submenu_item_workspace;
 GtkWidget *submenu_item_newnote;
 GtkWidget *submenu_filelist_item2;
@@ -31,11 +32,14 @@ GtkWidget *imgbox;
 GtkWidget *submenu_item_zoomreset;
 GtkWidget *submenu_item_zoomout;
 GtkWidget *submenu_item_zoomin;
+GtkWidget *submenu_item_toggleimgs;
+GtkWidget *submenu_item_settings;
 GtkWidget *save_button;
 GtkWidget *rename_button;
 GtkWidget *delete_button;
 GtkWidget *pic_button;
 GtkWidget *scrolled_list;
+GtkWidget *filelist_box;
 GtkWidget *scrolled_txt;
 GtkWidget *paned_horiz1;
 GtkWidget *paned_horiz2;
@@ -43,10 +47,9 @@ GtkWidget *dialog;
 GtkWidget *submenu_item_wordwrap;
 GtkWidget *status_label;
 GtkWidget *submenu_imglist_item2;
+GtkWidget *newnote_button;
 
 GPtrArray *program_icon_names;
-
-
 
 gchar *markup_buffer = NULL;
 
@@ -126,11 +129,11 @@ void create_window(void)
 		gtk_menu_set_reserve_toggle_size(GTK_MENU(submenu), FALSE);
 	submenu_item_workspace = gtk_menu_item_new_with_label("Switch workspace");
 
-	GtkWidget *submenu_item_settings = gtk_menu_item_new_with_label("Preferences");
+	submenu_item_settings = gtk_menu_item_new_with_label("Preferences");
 	GtkWidget *submenu_item_about = gtk_menu_item_new_with_label("About");
 	GtkWidget *submenu_item_onlinehelp = gtk_menu_item_new_with_label("Online Help");
 
-	GtkWidget *submenu_filelist = gtk_menu_new();
+	submenu_filelist = gtk_menu_new();
 		gtk_menu_set_reserve_toggle_size(GTK_MENU(submenu_filelist), FALSE);
 	submenu_item_newnote = gtk_menu_item_new_with_label("Create new note");
 	submenu_item_save = gtk_menu_item_new_with_label("Save changes");
@@ -159,14 +162,18 @@ void create_window(void)
 	GtkWidget *submenu_view = gtk_menu_new();
 	submenu_item_wordwrap = gtk_check_menu_item_new_with_label("Word Wrap");
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(submenu_item_wordwrap), wordwrap);
-	gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_wordwrap);
-		gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), gtk_separator_menu_item_new());
+		gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_wordwrap);
+	gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), gtk_separator_menu_item_new());
 	submenu_item_zoomin = gtk_menu_item_new_with_label("Zoom In");
-	gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_zoomin);
+		gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_zoomin);
 	submenu_item_zoomout = gtk_menu_item_new_with_label("Zoom Out");
-	gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_zoomout);
+		gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_zoomout);
 	submenu_item_zoomreset = gtk_menu_item_new_with_label("Zoom Reset");
-	gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_zoomreset);
+		gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_zoomreset);
+	gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), gtk_separator_menu_item_new());
+	submenu_item_toggleimgs = gtk_check_menu_item_new_with_label("View images");
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(submenu_item_toggleimgs), !hideimgs);
+		gtk_menu_shell_append(GTK_MENU_SHELL(submenu_view), submenu_item_toggleimgs);
 
 	GtkWidget *submenu_help = gtk_menu_new();
 		gtk_menu_set_reserve_toggle_size(GTK_MENU(submenu_help), FALSE);
@@ -215,6 +222,10 @@ void create_window(void)
 		gtk_container_set_border_width(GTK_CONTAINER(window), 10);
 	}
 
+	newnote_button = gtk_button_new_with_label("Create new note");
+	gtk_box_pack_start(GTK_BOX(mainvbox), newnote_button, FALSE, FALSE, 0);
+	gtk_widget_hide(newnote_button);
+
 	GtkWidget *submenu_imglist = gtk_menu_new();
 		GtkWidget *submenu_imglist_item1 = gtk_menu_item_new_with_label("Open Picture");
 		submenu_imglist_item2 = gtk_menu_item_new_with_label("Delete Picture");
@@ -230,12 +241,15 @@ void create_window(void)
 	scrolled_list = gtk_scrolled_window_new(NULL, NULL);
 		//fixme need to handle wordwrap correctly, setting horizontal scrolling is a temporal solution
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_list), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	scrolled_txt = gtk_scrolled_window_new(NULL, NULL);
+		scrolled_txt = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_txt), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
 		filelist_renderer = gtk_cell_renderer_text_new();
-			g_object_set(filelist_renderer, "wrap-width", 64, NULL);
-			g_object_set(filelist_renderer, "wrap-mode", 2, NULL);
+			if (wrapfilelist)
+			{
+				g_object_set(filelist_renderer, "wrap-width", 64, NULL);
+				g_object_set(filelist_renderer, "wrap-mode", 2, NULL);
+			}
 		filelist = gtk_tree_view_new();
 			gtk_tree_view_set_activate_on_single_click(GTK_TREE_VIEW(filelist), TRUE);
 			gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(filelist), FALSE);
@@ -342,6 +356,7 @@ void create_window(void)
 		gtk_widget_set_vexpand(scrolled_txt, TRUE);
 		gtk_widget_set_hexpand(scrolled_txt, TRUE);
 
+		g_signal_connect(newnote_button, "clicked", G_CALLBACK(submenu_item_newnote_selected), NULL);
 		g_signal_connect(filelist, "row-activated", G_CALLBACK(on_filelist_item_selected), NULL);
 		g_signal_connect(filelist, "button-press-event", G_CALLBACK(filelist_element_showmenu), NULL);
 		g_signal_connect(buffer, "changed", G_CALLBACK(togglesave), GINT_TO_POINTER(0));
@@ -361,7 +376,8 @@ void create_window(void)
 		g_signal_connect(submenu_filelist_item2, "activate", G_CALLBACK(on_rename_button_clicked), NULL);
 		g_signal_connect(submenu_filelist_item3, "activate", G_CALLBACK(on_delete_button_clicked), NULL);
 
-		g_signal_connect(submenu_item_wordwrap, "activate", G_CALLBACK(updateconf), GINT_TO_POINTER(0));
+		g_signal_connect(submenu_item_wordwrap, "activate", G_CALLBACK(updateconf), GINT_TO_POINTER(2));
+		g_signal_connect(submenu_item_toggleimgs, "activate", G_CALLBACK(updateconf), GINT_TO_POINTER(2));
 
 		g_signal_connect(submenu_imglist_item1, "activate", G_CALLBACK(on_submenu_imglist_item1_selected), NULL);
 		g_signal_connect(submenu_imglist_item2, "activate", G_CALLBACK(on_submenu_imglist_item2_selected), NULL);
@@ -376,6 +392,7 @@ void create_window(void)
 	gtk_widget_add_accelerator(submenu_item_zoomout, "activate", accel_group, GDK_KEY_minus, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 	gtk_widget_add_accelerator(submenu_item_zoomreset, "activate", accel_group, GDK_KEY_0, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 	gtk_widget_add_accelerator(submenu_item_wordwrap, "activate", accel_group, GDK_KEY_R, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(submenu_item_toggleimgs, "activate", accel_group, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
 	g_signal_connect(submenu_item_zoomin, "activate", G_CALLBACK(adjust_font_size), GINT_TO_POINTER(2));
 	g_signal_connect(submenu_item_zoomout, "activate", G_CALLBACK(adjust_font_size), GINT_TO_POINTER(-2));
@@ -389,8 +406,11 @@ void create_window(void)
 	g_signal_connect(G_OBJECT(search_entry), "changed", G_CALLBACK(search_entry_changed), NULL);
 	g_signal_connect(G_OBJECT(next_button), "clicked", G_CALLBACK(next_button_clicked), NULL);
 	g_signal_connect(G_OBJECT(prev_button), "clicked", G_CALLBACK(prev_button_clicked), NULL);
-	load_file_list();
 
+	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+	gtk_widget_show_all(window);
+
+	load_file_list();
 
 	if (autosave)
 	{
@@ -404,10 +424,10 @@ void create_window(void)
 		}
 	}
 
-	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-	gtk_widget_show_all(window);
 	markup_buffer = g_strdup_printf("%s - SGNotes", current_workspace);
 	gtk_window_set_title(GTK_WINDOW(window), markup_buffer);
+
+	updateuistyle();
 
 	gtk_widget_hide(textbox_container);
 	gtk_widget_hide(imgbox);
@@ -420,7 +440,7 @@ void create_window(void)
 	gtk_widget_set_sensitive(submenu_item_zoomin, FALSE);
 	gtk_widget_set_sensitive(submenu_item_zoomreset, FALSE);
 	gtk_widget_set_sensitive(submenu_item_zoomout, FALSE);
-	updateuistyle();
+
 	gtk_main();
 }
 

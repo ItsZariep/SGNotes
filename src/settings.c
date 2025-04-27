@@ -15,13 +15,21 @@ guint selfromtreeview;
 guint selfromlistbox;
 guint nohome=0;
 guint initialized=0;
-guint usecsd=1;
+guint usecsd=0;
 guint resizablewidgets=0;
 guint saved=1;
 guint cooldown=0;
 guint visiblecfgmgr=0;
 guint timeout_id=0;
 guint fromfile=0;
+guint hideimgs=0;
+guint wrapfilelist=0;
+
+#ifndef WITHOUTSOURCEVIEW
+	guint linenumbers;
+	guint highlightline;
+	gchar *editortheme;
+#endif
 
 gchar *pm;
 gchar *notes_dir;
@@ -32,13 +40,31 @@ gchar *defworkspace;
 gchar *config_file_path;
 gchar *workspaces_path;
 
-//GtkWidget *scrolled_treeview,*treeview,*wintitle,*search_entry,*next_button,*prev_button;
+void set_default_variables(void)
+{
+	wordwrap = 1;
+	fontfamily = "Sans";
+	fontsize = 10;
+	fontstyle = "Regular";
+	fontweight = "400";
+	defworkspace = "Default";
+	permitoverwrite = 0;
+	autosave = 1;
+	autosaverate = 1;
+	usecsd = 0;
+	resizablewidgets = 0;
+	editortheme = "zarium";
+}
+
 void readconf(void)
 {
 	g_custom_message("SGNotes", "version: %s", pver);
 
-
-	config_file_path = g_build_filename(g_get_user_config_dir(), "sgnotes.conf", NULL);
+	#ifdef _WIN32
+		config_file_path = g_build_filename(g_get_user_config_dir(), "sgnotes", "sgnotes.conf", NULL);
+	#else
+		config_file_path = g_build_filename(g_get_user_config_dir(), "sgnotes.conf", NULL);
+	#endif
 	g_custom_message("Settings [READ]", "Reading file: %s", config_file_path);
 
 	GKeyFile *key_file;
@@ -48,6 +74,8 @@ void readconf(void)
 
 	if (!g_key_file_load_from_file(key_file, config_file_path, G_KEY_FILE_NONE, &error))
 	{
+		nocsd=1;
+		set_default_variables();
 		g_warning("Failed to load configuration file: %s", error->message);
 		g_error_free(error);
 		g_key_file_free(key_file);
@@ -57,14 +85,24 @@ void readconf(void)
 		wordwrap = g_key_file_get_integer(key_file, "View", "wordwrap", NULL);
 			g_custom_message("Settings [LOAD]", "wordwrap: %d", wordwrap);
 		fontfamily = g_key_file_get_string(key_file, "View", "fontfamily", NULL);
+			if (fontfamily == NULL) {fontfamily = g_strdup("Sans");}
 			g_custom_message("Settings [LOAD]", "fontfamily: %s", fontfamily);
 		fontsize = g_key_file_get_integer(key_file, "View", "fontsize", NULL);
-			g_custom_message("Settings [LOAD]", "fontsize: %d", fontsize);
 			rfontsize = fontsize;
+			g_custom_message("Settings [LOAD]", "fontsize: %d", fontsize);
 		fontstyle = g_key_file_get_string(key_file, "View", "fontstyle", NULL);
 			g_custom_message("Settings [LOAD]", "fontstyle: %s", fontstyle);
 		fontweight = g_key_file_get_string(key_file, "View", "fontweight", NULL);
 			g_custom_message("Settings [LOAD]", "fontweight: %s", fontweight);
+		#ifndef WITHOUTSOURCEVIEW
+			linenumbers = g_key_file_get_integer(key_file, "View", "linenumbers", NULL);
+				g_custom_message("Settings [LOAD]", "linenumbers: %d", linenumbers);
+			highlightline = g_key_file_get_integer(key_file, "View", "highlightline", NULL);
+				g_custom_message("Settings [LOAD]", "highlightline: %d", highlightline);
+			editortheme = g_key_file_get_string(key_file, "View", "editortheme", NULL);
+				if (editortheme == NULL) {editortheme = g_strdup("classic");}
+				g_custom_message("Settings [LOAD]", "editortheme: %s", editortheme);
+		#endif
 
 		defworkspace = g_key_file_get_string(key_file, "File", "defworkspace", NULL);
 			g_custom_message("Settings [LOAD]", "defworkspace: %s", defworkspace);
@@ -95,27 +133,29 @@ void readconf(void)
 		nocsd = (usecsd == 0);
 	}
 
-
 	resizablewidgets = g_key_file_get_integer(key_file, "Window", "resizablewidgets", NULL);
 		g_custom_message("Settings [LOAD]", "resizablewidgets: %d", resizablewidgets);
+	wrapfilelist = g_key_file_get_integer(key_file, "Window", "wrapfilelist", NULL);
+		g_custom_message("Settings [LOAD]", "wrapfilelist: %d", wrapfilelist);
+	hideimgs = g_key_file_get_integer(key_file, "Window", "hideimgs", NULL);
+		g_custom_message("Settings [LOAD]", "hideimgs: %d", hideimgs);
 
 	g_key_file_free(key_file);
-	//g_custom_message("SGNotes", "End of function: Readconf");
 }
 
 void updateconf(GtkWidget *widget, gpointer data)
 {
 	gint isdefault = GPOINTER_TO_INT(data);
 
-	if (!isdefault && visiblecfgmgr)
+	if (isdefault != 1 && visiblecfgmgr)
 	{
 		wordwrap = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gwordwrap));
 
 		fontfamily = g_strdup(
-			pango_font_family_get_name(
-				gtk_font_chooser_get_font_family(GTK_FONT_CHOOSER(gfont))
-			)
+			pango_font_family_get_name (gtk_font_chooser_get_font_family(GTK_FONT_CHOOSER(gfont)))
 		);
+
+		if (fontfamily == NULL) {fontfamily = g_strdup("Sans");}
 
 		PangoFontDescription *font_desc = gtk_font_chooser_get_font_desc(GTK_FONT_CHOOSER(gfont));
 
@@ -180,6 +220,9 @@ void updateconf(GtkWidget *widget, gpointer data)
 
 		rfontsize = font_size;
 		fontsize = font_size;
+		linenumbers = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(glinenumbers));
+		highlightline = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ghighlightline));
+		editortheme = g_object_get_data(G_OBJECT(geditortheme), "chtheme");
 
 		defworkspace = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(gdefworkspace));
 
@@ -188,25 +231,18 @@ void updateconf(GtkWidget *widget, gpointer data)
 		autosaverate = gtk_spin_button_get_value(GTK_SPIN_BUTTON(gautosaverate));
 		usecsd = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gusecsd));
 		resizablewidgets = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gresizablewidgets));
+		wrapfilelist = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gwrapfilelist));
+		hideimgs = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ghideimgs));
 	}
 	else if (!visiblecfgmgr)
 	{
 		wordwrap = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(submenu_item_wordwrap));
+		hideimgs = !gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(submenu_item_toggleimgs));
 	}
 	else
 	{
 		g_custom_message("Settings [SAVE]", "Restoring all values to default");
-		wordwrap = 1;
-		fontfamily = "";
-		fontsize = 10;
-		fontstyle = "Regular";
-		fontweight = "400";
-		defworkspace = "Default";
-		permitoverwrite = 0;
-		autosave = 1;
-		autosaverate = 0;
-		usecsd = 1;
-		resizablewidgets = 1;
+		set_default_variables();
 	}
 
 	if (!nohome)
@@ -223,7 +259,14 @@ void updateconf(GtkWidget *widget, gpointer data)
 			g_custom_message("Settings [SAVE]", "fontstyle: %s", fontstyle);
 		g_key_file_set_string(key_file, "View", "fontweight", fontweight);
 			g_custom_message("Settings [SAVE]", "fontweight: %s", fontweight);
-
+		#ifndef WITHOUTSOURCEVIEW
+			g_key_file_set_integer(key_file, "View", "linenumbers", linenumbers);
+				g_custom_message("Settings [SAVE]", "linenumbers: %d", linenumbers);
+			g_key_file_set_integer(key_file, "View", "highlightline", highlightline);
+				g_custom_message("Settings [SAVE]", "highlightline: %d", highlightline);
+			g_key_file_set_string(key_file, "View", "editortheme", editortheme);
+				g_custom_message("Settings [SAVE]", "editortheme: %s", editortheme);
+		#endif
 		g_key_file_set_string(key_file, "File", "defworkspace", defworkspace);
 			g_custom_message("Settings [SAVE]", "defworkspace: %s", defworkspace);
 		g_key_file_set_integer(key_file, "File", "permitoverwrite", permitoverwrite);
@@ -237,6 +280,10 @@ void updateconf(GtkWidget *widget, gpointer data)
 			g_custom_message("Settings [SAVE]", "usecsd: %d", usecsd);
 		g_key_file_set_integer(key_file, "Window", "resizablewidgets", resizablewidgets);
 			g_custom_message("Settings [SAVE]", "resizablewidgets: %d", resizablewidgets);
+		g_key_file_set_integer(key_file, "Window", "wrapfilelist", wrapfilelist);
+			g_custom_message("Settings [SAVE]", "wrapfilelist: %d", wrapfilelist);
+		g_key_file_set_integer(key_file, "Window", "hideimgs", hideimgs);
+			g_custom_message("Settings [SAVE]", "hideimgs: %d", hideimgs);
 
 		GError *error = NULL;
 		gchar *filedata = g_key_file_to_data(key_file, NULL, &error);
@@ -256,7 +303,6 @@ void updateconf(GtkWidget *widget, gpointer data)
 			g_warning("Failed to serialize key file: %s", error->message);
 			g_clear_error(&error);
 		}
-
 		g_key_file_unref(key_file);
 	}
 
@@ -288,9 +334,12 @@ void updateconf(GtkWidget *widget, gpointer data)
 				timeout_id = g_timeout_add_seconds(autosaverate, timeout_callback, NULL);
 			}
 		}
-		gtk_widget_destroy(dialog);
 	}
-
+	if (isdefault != 2)
+	{
+		gtk_widget_destroy(dialog);
+		visiblecfgmgr = 0;
+	}
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(submenu_item_wordwrap), wordwrap);
-	visiblecfgmgr = 0;
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(submenu_item_toggleimgs), !hideimgs);
 }

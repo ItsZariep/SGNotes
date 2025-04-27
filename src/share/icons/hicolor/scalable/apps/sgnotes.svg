@@ -1,0 +1,20 @@
+<svg width="64" height="64" version="1.1" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+ <g transform="translate(110.9 12.87)">
+  <g transform="translate(-.7555)" stroke-linecap="round" stroke-linejoin="round">
+   <rect x="-99.04" y="-1.452" width="41.87" height="49.06" ry="2.284" fill="#f9f9f9" stroke="#795548" stroke-width="7.045"/>
+   <g transform="matrix(.4403 0 0 .4403 -71.38 3.602)" fill="#b5b5b5" stroke="#b5b5b5">
+    <rect x="-45.38" y="-4.055" width="60.34" height="11.64" ry=".4656" stroke-width="3.818"/>
+    <rect transform="rotate(90)" x="-19.74" y="27.98" width="18.57" height="18.01" ry=".9952" stroke-width="2.601"/>
+    <rect transform="rotate(90)" x="-18.7" y="-15.56" width="19.08" height="18.07" ry=".9892" stroke-width="2.594"/>
+    <rect transform="rotate(90)" x="-26.69" y="-15.44" width="10.01" height="61.31" ry="2.151" stroke-width="2.867"/>
+    <rect transform="rotate(90)" x="-36.2" y=".4423" width="9.388" height="29.71" ry="1.411" stroke-width="2.423"/>
+   </g>
+   <g fill="#f9f9f9" stroke="#b5b5b5" stroke-dashoffset="90.75" stroke-width="3.963">
+    <path d="m-87.67 15.66h19.58" style="paint-order:stroke fill markers"/>
+    <path d="m-88.05 23.26h19.58" style="paint-order:stroke fill markers"/>
+    <path d="m-87.78 30.83h19.58" style="paint-order:stroke fill markers"/>
+    <path d="m-88.14 38.43h19.58" style="paint-order:stroke fill markers"/>
+   </g>
+  </g>
+ </g>
+</svg>
