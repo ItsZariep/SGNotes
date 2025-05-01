@@ -25,6 +25,7 @@ extern GtkWidget *gusecsd;
 extern GtkWidget *gresizablewidgets;
 extern GtkWidget *gwrapfilelist;
 extern GtkWidget *ghideimgs;
+extern GtkWidget *gwtheme;
 
 #ifndef WITHOUTSOURCEVIEW
 	extern GtkWidget *glinenumbers;

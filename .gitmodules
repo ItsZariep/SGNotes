@@ -1,0 +1,6 @@
+[submodule "src/share/themes/Windows-10"]
+	path = src/share/themes/Windows-10
+	url = https://github.com/B00merang-Project/Windows-10
+[submodule "src/share/themes/Windows-10-Dark"]
+	path = src/share/themes/Windows-10-Dark
+	url = https://github.com/B00merang-Project/Windows-10-Dark

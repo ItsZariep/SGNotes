@@ -13,12 +13,14 @@ UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S), Linux)
 	CFLAGS = `pkg-config --cflags gtk+-3.0 $(SOURCEVIEW)` -Dpver=\"$(VERSION)\" $(SOURCEVIEWARG)
+	PICON =
 else
 	CFLAGS = `pkg-config --cflags gtk+-3.0 $(SOURCEVIEW)` -Dpver=\"$(VERSION)\" $(SOURCEVIEWARG) -mwindows -O2
+	PICON = programicon.o
 endif
 
 LIBS = `pkg-config --libs gtk+-3.0 $(SOURCEVIEW)`
-SRC = events.c fmanip.c img.c settings.c cfgmgr.c editor.c mainwindow.c sgnotes.c 
+SRC = events.c fmanip.c img.c settings.c cfgmgr.c editor.c mainwindow.c sgnotes.c $(PICON)
 OBJ = $(SRC:.c=.o)
 EXE = sgnotes
 
@@ -31,6 +33,12 @@ all: $(EXE)
 
 $(EXE): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+
+ifeq ($(OS),Windows_NT)
+$(EXE): programicon.o
+programicon.o: programicon.rc
+	windres programicon.rc -O coff -o programicon.o
+endif
 
 debug:
 	$(CC) $(CFLAGS) -g $(SRC) -o debug $(LIBS)

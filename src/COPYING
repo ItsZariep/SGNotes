@@ -1,0 +1,21 @@
+This software is licensed under the GNU General Public License (GPL) version 3 or later.
+
+The following libraries are used by this software:
+
+- gettext
+- GLib
+- GTK
+- Pango
+- ATK
+- B00merang Windows 10 Theme
+- B00merang Windows 10 Dark Theme
+
+You may also access the source code of these libraries from the following official locations:
+
+- gettext: https://www.gnu.org/software/gettext/
+- GLib: https://developer.gnome.org/glib/
+- GTK: https://www.gtk.org/
+- Pango: https://www.pango.org/
+- ATK: https://developer.gnome.org/atk/
+- https://github.com/B00merang-Project/Windows-10/
+- https://github.com/B00merang-Project/Windows-10-Dark/

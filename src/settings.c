@@ -24,6 +24,7 @@ guint timeout_id=0;
 guint fromfile=0;
 guint hideimgs=0;
 guint wrapfilelist=0;
+guint wtheme=0;
 
 #ifndef WITHOUTSOURCEVIEW
 	guint linenumbers;
@@ -139,6 +140,8 @@ void readconf(void)
 		g_custom_message("Settings [LOAD]", "wrapfilelist: %d", wrapfilelist);
 	hideimgs = g_key_file_get_integer(key_file, "Window", "hideimgs", NULL);
 		g_custom_message("Settings [LOAD]", "hideimgs: %d", hideimgs);
+	wtheme = g_key_file_get_integer(key_file, "Window", "wtheme", NULL);
+		g_custom_message("Settings [LOAD]", "wtheme: %d", wtheme);
 
 	g_key_file_free(key_file);
 }
@@ -233,6 +236,7 @@ void updateconf(GtkWidget *widget, gpointer data)
 		resizablewidgets = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gresizablewidgets));
 		wrapfilelist = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gwrapfilelist));
 		hideimgs = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ghideimgs));
+		wtheme = gtk_combo_box_get_active(GTK_COMBO_BOX(gwtheme));
 	}
 	else if (!visiblecfgmgr)
 	{
@@ -284,6 +288,8 @@ void updateconf(GtkWidget *widget, gpointer data)
 			g_custom_message("Settings [SAVE]", "wrapfilelist: %d", wrapfilelist);
 		g_key_file_set_integer(key_file, "Window", "hideimgs", hideimgs);
 			g_custom_message("Settings [SAVE]", "hideimgs: %d", hideimgs);
+		g_key_file_set_integer(key_file, "Window", "wtheme", wtheme);
+			g_custom_message("Settings [SAVE]", "wtheme: %d", wtheme);
 
 		GError *error = NULL;
 		gchar *filedata = g_key_file_to_data(key_file, NULL, &error);

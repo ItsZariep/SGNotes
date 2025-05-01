@@ -2,6 +2,38 @@
 
 gchar *program_icon;
 
+#ifdef _WIN32
+int is_dark_theme_enabled()
+{
+    HKEY hKey;
+    DWORD value = 1;  // Default to light theme if registry read fails
+    DWORD valueSize = sizeof(value);
+    LONG result;
+    
+    // Open the registry key
+    result = RegOpenKeyExA(HKEY_CURRENT_USER,
+        "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", 0, KEY_READ, &hKey);
+    
+    if (result != ERROR_SUCCESS) {
+        return 0;  // Return light theme if we can't open the key
+    }
+    
+    // Get the value - using RRF_RT_REG_DWORD to ensure we get the right type
+    result = RegGetValueA(hKey, NULL, "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &value, &valueSize);
+    
+    // Always close the key when done
+    RegCloseKey(hKey);
+    
+    if (result != ERROR_SUCCESS) {
+        return 0;  // Return light theme if we can't read the value
+    }
+    
+    // If AppsUseLightTheme is 0, dark theme is enabled
+    return (value == 0);
+}
+
+#endif
+
 void updateuistyle(void)
 {
 	if (current_file[0] != '\0') { gtk_widget_set_visible(imgbox, !hideimgs);}
@@ -25,6 +57,31 @@ void updateuistyle(void)
 			gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(text_view), linenumbers);
 			gtk_source_view_set_highlight_current_line(GTK_SOURCE_VIEW(text_view), highlightline);
 	#endif
+
+	#ifdef _WIN32
+	gchar *theme_name = NULL;
+
+	if (wtheme == 0)
+	{
+		theme_name = is_dark_theme_enabled() ? "Windows-10-Dark" : "Windows-10";
+	}
+	else if (wtheme == 1)
+	{
+		theme_name = "Windows-10";
+	}
+	else
+	{
+		theme_name = "Windows-10-Dark";
+	}
+
+	if (theme_name != NULL)
+	{
+		g_object_set(gtk_settings_get_default(), "gtk-theme-name", theme_name, NULL);
+	}
+	gtk_style_context_reset_widgets(gdk_screen_get_default());
+
+	#endif
+
 }
 
 gchar* probe_icons_from_theme(GPtrArray *icon_names)

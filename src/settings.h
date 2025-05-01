@@ -30,6 +30,7 @@ extern guint timeout_id;
 extern guint fromfile;
 extern guint hideimgs;
 extern guint wrapfilelist;
+extern guint wtheme;
 
 extern gchar *notes_dir;
 extern gchar *workspaces_path;

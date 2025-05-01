@@ -8,6 +8,11 @@
 #include "img.h"
 #include "mainwindow.h"
 
+#ifdef _WIN32
+#include <windows.h>
+int is_dark_theme_enabled();
+#endif
+
 extern gchar *program_icon;
 
 void updateuistyle(void);

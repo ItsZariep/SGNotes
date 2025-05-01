@@ -31,6 +31,7 @@ gchar notes_path[8192];
 GtkWidget *geditortheme_apply;
 gchar *tmpeditortheme;
 GtkWidget *geditortheme_dialog;
+GtkWidget *gwtheme;
 
 void on_themebutton_clicked(void)
 {
@@ -163,7 +164,7 @@ void showcfg(void)
 	gtk_window_set_title(GTK_WINDOW(dialog), "Settings - SGNotes");
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
 	gtk_widget_set_size_request(dialog, 400, 200);
-	window_set_icon(GTK_WINDOW(window), program_icon);
+	window_set_icon(GTK_WINDOW(dialog), program_icon);
 	gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
 	g_signal_connect(dialog, "destroy", G_CALLBACK(closecfg), dialog);
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
@@ -252,6 +253,16 @@ void showcfg(void)
 				gtk_widget_set_direction(gresizablewidgets, GTK_TEXT_DIR_RTL);
 			gwrapfilelist = gtk_check_button_new_with_label("wrap file list");
 				gtk_widget_set_direction(gwrapfilelist, GTK_TEXT_DIR_RTL);
+			#ifdef _WIN32
+				GtkWidget *gwtheme_label = gtk_label_new("Theme");
+				gtk_label_set_xalign(GTK_LABEL(gwtheme_label), XA);
+				gtk_widget_set_margin_start(GTK_WIDGET(gwtheme_label), XM);
+				gwtheme = gtk_combo_box_text_new();
+					gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(gwtheme), NULL, "System");
+					gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(gwtheme), NULL, "Light");
+					gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(gwtheme), NULL, "Dark");
+			#endif
+
 			ghideimgs = gtk_check_button_new_with_label("Hide images");
 				gtk_widget_set_direction(ghideimgs, GTK_TEXT_DIR_RTL);
 
@@ -293,6 +304,10 @@ void showcfg(void)
 		gtk_grid_attach(GTK_GRID(windowgrid), gwrapfilelist, 0, 3, 2, 1);
 		gtk_grid_attach(GTK_GRID(windowgrid), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), 0, 4, 2, 1);
 		gtk_grid_attach(GTK_GRID(windowgrid), ghideimgs, 0, 5, 2, 1);
+		#ifdef _WIN32
+		gtk_grid_attach(GTK_GRID(windowgrid), gwtheme_label, 0, 6, 1, 1);
+		gtk_grid_attach(GTK_GRID(windowgrid), gwtheme, 1, 6, 1, 1);
+		#endif
 
 		gtk_box_pack_start(GTK_BOX(applybox), defbtn, FALSE, FALSE, 2);
 		gtk_box_pack_end(GTK_BOX(applybox), applybtn, FALSE, FALSE, 2);
@@ -322,6 +337,7 @@ void showcfg(void)
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gresizablewidgets), resizablewidgets);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ghideimgs), hideimgs);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gwrapfilelist), wrapfilelist);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(gwtheme), wtheme);
 
 	gchar *selectedfont = g_strdup_printf("%s %s %d", fontfamily, fontstyle, fontsize);
 

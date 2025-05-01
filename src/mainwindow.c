@@ -239,17 +239,8 @@ void create_window(void)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
 
 	scrolled_list = gtk_scrolled_window_new(NULL, NULL);
-		//fixme need to handle wordwrap correctly, setting horizontal scrolling is a temporal solution
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_list), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 		scrolled_txt = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_txt), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-		filelist_renderer = gtk_cell_renderer_text_new();
-			if (wrapfilelist)
-			{
-				g_object_set(filelist_renderer, "wrap-width", 64, NULL);
-				g_object_set(filelist_renderer, "wrap-mode", 2, NULL);
-			}
+	filelist_renderer = gtk_cell_renderer_text_new();
 		filelist = gtk_tree_view_new();
 			gtk_tree_view_set_activate_on_single_click(GTK_TREE_VIEW(filelist), TRUE);
 			gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(filelist), FALSE);
@@ -451,4 +442,3 @@ void restart_program(void)
 	readconf();
 	create_window();
 }
-

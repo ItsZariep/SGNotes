@@ -220,7 +220,6 @@ void on_submenu_item_workspace_selected(void)
 	gtk_widget_destroy(workspaces_dialog);
 }
 
-
 void load_file_list(void)
 {
 	GtkTreeViewColumn *column;
@@ -274,15 +273,22 @@ void load_file_list(void)
 
 	if (GTK_IS_TREE_VIEW(filelist))
 	{
-		gtk_tree_view_set_model(GTK_TREE_VIEW(filelist), GTK_TREE_MODEL(filelist_store));
-
 		GtkCellRenderer *renderer_char = gtk_cell_renderer_text_new();
 		column = gtk_tree_view_column_new_with_attributes("Char", renderer_char, "text", 0, NULL);
 		gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
 
 		GtkCellRenderer *renderer_filename = gtk_cell_renderer_text_new();
+
+		if (wrapfilelist)
+		{
+			g_object_set(renderer_filename, "wrap-mode", PANGO_WRAP_WORD_CHAR, "wrap-width", 100, NULL);
+			gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_list), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+		}
+
+			gtk_tree_view_set_model(GTK_TREE_VIEW(filelist), GTK_TREE_MODEL(filelist_store));
 		column = gtk_tree_view_column_new_with_attributes("File Name", renderer_filename, "text", 1, NULL);
 		gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
+
 	}
 
 	GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(filelist));
