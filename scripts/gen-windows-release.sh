@@ -34,4 +34,6 @@ gtk-update-icon-cache -f "$icons_path/hicolor"
 glib-compile-schemas sgnotes_release/share/glib-2.0/schemas
 
 cp sgnotes.exe "$bin_path"
+cp /mingw64/bin/gspawn-win64-helper-console.exe "$bin_path"
+cp /mingw64/bin/gspawn-win64-helper.exe "$bin_path"
 cp COPYING sgnotes_release

@@ -627,12 +627,14 @@ gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer d
 		}
 		else
 		{
+		#ifndef _WIN32 //temporally disabled on windows because it doesn't work
 			GtkWidget *submenu = gtk_menu_new();
 				GtkWidget *submenu_item1 = gtk_menu_item_new_with_label("Show pictures folder in file manager");
 				gtk_menu_shell_append(GTK_MENU_SHELL(submenu), submenu_item1);
 				g_signal_connect(submenu_item1, "activate", G_CALLBACK(on_img_empty_selected), NULL);
 			gtk_widget_show_all(submenu);
 			gtk_menu_popup_at_pointer(GTK_MENU(submenu), NULL);
+		#endif
 		}
 	}
 	else if (event->button == 1)
