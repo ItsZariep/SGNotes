@@ -10,7 +10,9 @@ share_path="sgnotes_release/share"
 icons_path="$share_path/icons"
 
 mkdir -pv "$bin_path"
-mkdir -pv "$share_path/glib-2.0"
+mkdir -pv "$share_path/glib-2.0/schemas"
+mkdir -pv "$icons_path/Adwaita"
+mkdir -pv "$icons_path/hicolor"
 
 dependencies=$(ldd "$exe_path" | grep mingw64 | awk '{print $3}' | grep -E "\.dll$")
 
@@ -22,14 +24,13 @@ done
 
 cp -rv /mingw64/share/gtksourceview-4/language-specs  "sgnotes_release/share/gtksourceview-4/language-specs"
 
-cp -rv share "$share_path"
-cp -rv /mingw64/share/icons/Adwaita "$icons_path/"
-cp -rv /mingw64/share/icons/hicolor "$icons_path/"
+cp -rv share sgnotes_release
+cp -rv /mingw64/share/icons/Adwaita/* "$icons_path/Adwaita/"
+cp -rv /mingw64/share/icons/hicolor/* "$icons_path/hicolor/"
 cp -rv /mingw64/share/glib-2.0/schemas/* sgnotes_release/share/glib-2.0/schemas/
 
 gtk-update-icon-cache -f "$icons_path/Adwaita"
 gtk-update-icon-cache -f "$icons_path/hicolor"
-rm sgnotes_release/share/glib-2.0/schemas/gschema*
 glib-compile-schemas sgnotes_release/share/glib-2.0/schemas
 
 cp sgnotes.exe "$bin_path"

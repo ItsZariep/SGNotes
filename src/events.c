@@ -5,31 +5,21 @@ gchar *program_icon;
 #ifdef _WIN32
 int is_dark_theme_enabled()
 {
-    HKEY hKey;
-    DWORD value = 1;  // Default to light theme if registry read fails
-    DWORD valueSize = sizeof(value);
-    LONG result;
-    
-    // Open the registry key
-    result = RegOpenKeyExA(HKEY_CURRENT_USER,
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", 0, KEY_READ, &hKey);
-    
-    if (result != ERROR_SUCCESS) {
-        return 0;  // Return light theme if we can't open the key
-    }
-    
-    // Get the value - using RRF_RT_REG_DWORD to ensure we get the right type
-    result = RegGetValueA(hKey, NULL, "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &value, &valueSize);
-    
-    // Always close the key when done
-    RegCloseKey(hKey);
-    
-    if (result != ERROR_SUCCESS) {
-        return 0;  // Return light theme if we can't read the value
-    }
-    
-    // If AppsUseLightTheme is 0, dark theme is enabled
-    return (value == 0);
+	HKEY hKey;
+	DWORD value = 1;
+	DWORD valueSize = sizeof(value);
+	LONG result;
+
+	result = RegOpenKeyExA(HKEY_CURRENT_USER,
+		"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", 0, KEY_READ, &hKey);
+
+	if (result != ERROR_SUCCESS) { return 0; }
+
+	result = RegGetValueA(hKey, NULL, "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &value, &valueSize);
+	RegCloseKey(hKey);
+
+	if (result != ERROR_SUCCESS) { return 0; }
+	return (value == 0);
 }
 
 #endif
