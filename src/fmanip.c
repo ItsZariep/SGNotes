@@ -875,19 +875,34 @@ void submenu_item_newnote_selected(GtkWidget *widget, gpointer data)
 	gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
 	gtk_widget_show_all(dialog);
 
-	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	while (1)
+	{
+		result = gtk_dialog_run(GTK_DIALOG(dialog));
+		if (result == GTK_RESPONSE_OK)
+		{
+			const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry));
+			if (g_strcmp0(text, "") == 0)
+			{
+				GtkWidget *msg = gtk_message_dialog_new(GTK_WINDOW(dialog),
+					GTK_DIALOG_MODAL,
+					GTK_MESSAGE_WARNING,
+					GTK_BUTTONS_OK,
+					"Note title cannot be empty.");
+				gtk_dialog_run(GTK_DIALOG(msg));
+				gtk_widget_destroy(msg);
+				continue;
+			}
+			gchar *filename = g_strdup_printf("%s.md", text);
+			saveToFile(filename);
+			g_free(filename);
+			gtk_widget_hide(newnote_button);
+			break;
+		}
+		else if (result == GTK_RESPONSE_CANCEL || result == GTK_RESPONSE_DELETE_EVENT)
+		{
+			break;
+		}
+	}
 
-	if (result == GTK_RESPONSE_OK)
-	{
-		const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry));
-		gchar *filename = g_strdup_printf("%s.md", text);
-		saveToFile(filename);
-		g_free(filename);
-	}
-	else if (result == GTK_RESPONSE_CANCEL)
-	{
-		g_print("\n");
-	}
 	gtk_widget_destroy(dialog);
-	gtk_widget_hide(newnote_button);
 }
