@@ -8,6 +8,9 @@ gchar *clicked_workspace;
 
 void add_images_from_directory(GtkWidget *widget, gpointer user_data)
 {
+	(void)widget;
+	(void)user_data;
+
 	gtk_list_store_clear(GTK_LIST_STORE(imglist_store));
 
 	gchar *pre_path = g_build_filename(notes_dir, current_workspace, NULL);
@@ -65,6 +68,10 @@ void add_images_from_directory(GtkWidget *widget, gpointer user_data)
 
 void add_image(GtkWidget *widget, gpointer user_data)
 {
+
+	(void)widget;
+	(void)user_data;
+
 	GtkTreeIter iter;
 
 	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
@@ -207,8 +214,17 @@ gint numeric_file_compare(const void *a, const void *b)
 	return num1 - num2;
 }
 
+static gint numeric_file_compare_with_data(const void *a, const void *b, void *user_data)
+{
+	(void)user_data;
+	return numeric_file_compare(a, b);
+}
+
 void on_submenu_imglist_item2_selected(GtkWidget *widget, gpointer user_data)
 {
+
+	(void)widget;
+
 	gchar *file_imgs = g_strconcat(current_file, "_files", NULL);
 	gchar *filename = g_strdup_printf("%d.png", selfromtreeview);
 	gchar *file_path = g_build_filename(notes_dir, current_workspace, file_imgs, filename, NULL);
@@ -246,7 +262,7 @@ void on_submenu_imglist_item2_selected(GtkWidget *widget, gpointer user_data)
 
 				g_dir_close(dir);
 
-				g_array_sort_with_data(file_names, (GCompareDataFunc)numeric_file_compare, NULL);
+				g_array_sort_with_data(file_names, numeric_file_compare_with_data, NULL);
 
 				for (guint i = 0; i < file_names->len; i++)
 				{

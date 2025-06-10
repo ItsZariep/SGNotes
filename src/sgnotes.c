@@ -10,7 +10,7 @@ GOptionEntry entries[] =
 	{"nocsd", 0, 0, G_OPTION_ARG_NONE, &nocsd, "Disable CSD Decoration", NULL},
 	{"verbose", 0, 0, G_OPTION_ARG_NONE, &verbose, "Show verbose program messages", NULL},
 	{G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_STRING_ARRAY, &remaining_args, "Workspace name or other arguments", "[Workspace name]"},
-	{NULL}
+	{ NULL, 0, 0, 0, NULL, NULL, NULL }
 };
 
 int main(int argc, char *argv[])

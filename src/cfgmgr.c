@@ -44,6 +44,8 @@ void on_themebutton_clicked(void)
 
 gboolean on_source_view_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
+	(void)user_data;
+	(void)event;
 	const gchar *scheme_id = (const gchar *)g_object_get_data(G_OBJECT(widget), "scheme-id");
 	const gchar *scheme_name = (const gchar *)g_object_get_data(G_OBJECT(widget), "scheme-name");
 	gchar *buttontext = g_strdup_printf("Apply theme: %s", scheme_name);

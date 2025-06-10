@@ -2,6 +2,8 @@
 
 void on_save_button_clicked(GtkButton *button, gpointer user_data)
 {
+	(void)user_data;
+	(void)button;
 	//Fix saving empty files
 	if (current_file[0] == '\0' || saved == 1)
 	{
@@ -27,6 +29,9 @@ void on_save_button_clicked(GtkButton *button, gpointer user_data)
 
 void on_create_new_workspace(GtkButton *button, gpointer voiddialog)
 {
+
+	(void)voiddialog;
+
 	GtkWidget *entry, *dialog_new_workspace;
 	GtkWidget *dialog_content;
 	GtkWidget *label;
@@ -104,6 +109,7 @@ void on_create_new_workspace(GtkButton *button, gpointer voiddialog)
 
 void on_workspace_menu_item_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
+	(void)user_data;
 	if (clicked_workspace != NULL)
 	{
 		gchar *objetive = g_build_filename(notes_dir, clicked_workspace, NULL);
@@ -405,6 +411,8 @@ void delete_current_file(gchar *file_path)
 
 void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 {
+	(void)button;
+	(void)user_data;
 	if (!saved)
 	{
 		gint opt = show_file_warning();
@@ -467,6 +475,8 @@ void on_delete_button_clicked(GtkButton *button, gpointer user_data)
 
 void on_export_button_clicked(GtkButton *button, gpointer user_data)
 {
+	(void)button;
+	(void)user_data;
 	GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist));
 	GtkTreeIter iter;
 
@@ -671,6 +681,8 @@ void saveToFile(const gchar *text)
 
 void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 {
+	(void)user_data;
+	(void)button;
 	if (!saved)
 	{
 		gint opt = show_file_warning();
@@ -853,6 +865,7 @@ void on_rename_button_clicked(GtkButton *button, gpointer user_data)
 
 void submenu_item_newnote_selected(GtkWidget *widget, gpointer data)
 {
+	(void)widget;
 	GtkWidget *content_area, *entry;
 	gint result;
 

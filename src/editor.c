@@ -48,8 +48,10 @@ void update_status(GtkTextBuffer *input, GtkLabel *label)
 	g_free(status);
 }
 
-void on_cursor_moved(GtkTextBuffer *aa, gpointer user_data)
+void on_cursor_moved(GtkTextBuffer *dummy, gpointer user_data)
 {
+	(void)user_data;
+	(void)dummy;
 	update_status(buffer, GTK_LABEL(status_label));
 }
 
@@ -80,6 +82,7 @@ void find(GtkTextView *input, const gchar *text, GtkTextIter *iter)
 
 void search_entry_changed(GtkEditable *editable, gpointer user_data)
 {
+	(void)user_data;
 	const gchar *text;
 	GtkTextIter iter;
 
@@ -93,6 +96,7 @@ void search_entry_changed(GtkEditable *editable, gpointer user_data)
 
 void prev_button_clicked(GtkWidget *input)
 {
+	(void)input;
 	const gchar *text;
 	GtkTextIter iter, start, end;
 
@@ -135,6 +139,7 @@ void prev_button_clicked(GtkWidget *input)
 
 void next_button_clicked(GtkWidget *input)
 {
+	(void)input;
 	const gchar *text;
 	GtkTextMark *last_pos;
 	GtkTextIter iter;

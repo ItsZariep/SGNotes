@@ -77,7 +77,7 @@ void updateuistyle(void)
 gchar* probe_icons_from_theme(GPtrArray *icon_names)
 {
 	theme = gtk_icon_theme_get_default();
-	gint i;
+	guint i;
 
 	for (i = 0; i < icon_names->len; i++)
 	{
@@ -204,6 +204,7 @@ void show_error_dialog(const gchar *message)
 
 void togglesave(GtkWidget *widget, gpointer data)
 {
+	(void)widget;
 	if ((autosave == 1 && autosaverate != 0) || autosave == 0) 
 	{
 		saved = GPOINTER_TO_INT(data);
@@ -256,6 +257,7 @@ gboolean timeout_callback(gpointer user_data)
 
 gboolean on_workspace_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
+	(void)user_data;
 	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
 		GtkTreeView *tree_view = GTK_TREE_VIEW(widget);
@@ -300,6 +302,7 @@ gboolean on_workspace_button_press(GtkWidget *widget, GdkEventButton *event, gpo
 
 gboolean filelist_element_showmenu(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
+	(void)user_data;
 	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
 		GtkTreeView *tree_view = GTK_TREE_VIEW(widget);
@@ -354,6 +357,8 @@ gboolean filelist_element_showmenu(GtkWidget *widget, GdkEventButton *event, gpo
 
 void on_workspace_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer output)
 {
+	(void)column;
+
 	GtkTreeModel *model;
 	GtkTreeIter iter;
 	gchar *selected_workspace;
@@ -374,6 +379,8 @@ void on_workspace_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTr
 
 void adjust_font_size(GtkWidget *widget, gpointer data)
 {
+	(void)widget;
+	(void)data;
 	gint adjustment = GPOINTER_TO_INT(data);
 	if (adjustment == 0)
 	{
@@ -398,6 +405,9 @@ void adjust_font_size(GtkWidget *widget, gpointer data)
 
 void on_close_file(GtkWidget *widget, gpointer data)
 {
+	(void)widget;
+	(void)data;
+
 	if (!saved)
 	{
 		gint opt = show_file_warning();
@@ -445,6 +455,8 @@ void on_close_file(GtkWidget *widget, gpointer data)
 
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
+	(void)widget;
+	(void)data;
 	if ((event->state & GDK_CONTROL_MASK) && (event->keyval == GDK_KEY_f))
 	{
 		if (current_file[0] == '\0')
@@ -482,6 +494,8 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data)
 
 gboolean on_scroll_event(GtkWidget *widget, GdkEventScroll *event, gpointer user_data)
 {
+	(void)widget;
+	(void)user_data;
 	if (event->state & GDK_CONTROL_MASK)
 	{
 		if (event->direction == GDK_SCROLL_UP)
@@ -500,6 +514,7 @@ gboolean on_scroll_event(GtkWidget *widget, GdkEventScroll *event, gpointer user
 
 gboolean on_button_press(GtkWidget *widget, GdkEventButton *event, gpointer data)
 {
+	(void)widget;
 	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
 		GtkWidget *submenu = GTK_WIDGET(data);
@@ -511,6 +526,8 @@ gboolean on_button_press(GtkWidget *widget, GdkEventButton *event, gpointer data
 }
 gboolean on_list_press(GtkWidget *widget, GdkEventButton *event, gpointer data)
 {
+	(void)widget;
+	(void)data;
 	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
 		return TRUE;
@@ -520,6 +537,7 @@ gboolean on_list_press(GtkWidget *widget, GdkEventButton *event, gpointer data)
 // Entry dialogs behavior
 gboolean on_entry_key_press(GtkWidget *widget, GdkEventKey *event, GtkDialog *input)
 {
+	(void)widget;
 	if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter)
 	{
 		gtk_dialog_response(input, GTK_RESPONSE_OK);
@@ -530,6 +548,7 @@ gboolean on_entry_key_press(GtkWidget *widget, GdkEventKey *event, GtkDialog *in
 
 void on_entry_changed(GtkEditable *editable, gpointer user_data)
 {
+	(void)user_data;
 	GtkWidget *entry = GTK_WIDGET(editable);
 	const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry));
 	gchar *cleaned_text = g_strdelimit(g_strdup(text), "/\\\n", '\0');
@@ -658,6 +677,7 @@ gboolean on_treeview_clicked(GtkWidget *input, GdkEventButton *event, gpointer d
 
 gboolean on_listbox_clicked(GtkWidget *listbox, GdkEventButton *event, gpointer data)
 {
+	(void)listbox;
 	if (event->button == 3)
 	{
 		GtkListBoxRow *row = gtk_list_box_get_row_at_y(GTK_LIST_BOX(filelist), (gint)event->y);
@@ -716,6 +736,10 @@ gboolean quit_handler(void)
 
 void custom_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
+	(void)log_level;
+	(void)user_data;
+	(void)log_domain;
+
 	gint64 now_us = g_get_real_time();
 
 	time_t seconds = (time_t)(now_us / G_USEC_PER_SEC);

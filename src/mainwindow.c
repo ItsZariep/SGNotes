@@ -55,6 +55,8 @@ gchar *markup_buffer = NULL;
 
 void on_submenu_item_about_selected(GtkMenuItem *menuitem, gpointer userdata)
 {
+	(void)userdata;
+	(void)menuitem;
 	dialog = gtk_about_dialog_new();
 		window_set_icon(GTK_WINDOW(dialog), program_icon);
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(dialog), "SGNotes");

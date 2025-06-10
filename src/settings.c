@@ -148,6 +148,7 @@ void readconf(void)
 
 void updateconf(GtkWidget *widget, gpointer data)
 {
+	(void)widget;
 	gint isdefault = GPOINTER_TO_INT(data);
 
 	if (isdefault != 1 && visiblecfgmgr)
