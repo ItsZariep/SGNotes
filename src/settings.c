@@ -26,11 +26,9 @@ guint hideimgs=0;
 guint wrapfilelist=0;
 guint wtheme=0;
 
-#ifndef WITHOUTSOURCEVIEW
-	guint linenumbers;
-	guint highlightline;
-	gchar *editortheme;
-#endif
+guint linenumbers;
+guint highlightline;
+gchar *editortheme;
 
 gchar *pm;
 gchar *notes_dir;
@@ -224,10 +222,12 @@ void updateconf(GtkWidget *widget, gpointer data)
 
 		rfontsize = font_size;
 		fontsize = font_size;
+	#ifndef WITHOUTSOURCEVIEW
 		linenumbers = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(glinenumbers));
 		highlightline = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ghighlightline));
 		editortheme = g_object_get_data(G_OBJECT(geditortheme), "chtheme");
-
+		wtheme = gtk_combo_box_get_active(GTK_COMBO_BOX(gwtheme));
+	#endif
 		defworkspace = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(gdefworkspace));
 
 		permitoverwrite = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gpermitoverwrite));
@@ -237,7 +237,7 @@ void updateconf(GtkWidget *widget, gpointer data)
 		resizablewidgets = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gresizablewidgets));
 		wrapfilelist = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gwrapfilelist));
 		hideimgs = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ghideimgs));
-		wtheme = gtk_combo_box_get_active(GTK_COMBO_BOX(gwtheme));
+
 	}
 	else if (!visiblecfgmgr)
 	{

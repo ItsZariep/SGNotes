@@ -215,6 +215,13 @@ void load_file_content(gchar *filename)
 	g_io_channel_shutdown(channel, TRUE, NULL);
 	g_io_channel_unref(channel);
 
+#ifndef WITHOUTSOURCEVIEW
+	GtkSourceUndoManager *undo_manager = gtk_source_buffer_get_undo_manager(GTK_SOURCE_BUFFER(buffer));
+	// Prevent undo to invalid points
+	gtk_source_undo_manager_begin_not_undoable_action(undo_manager);
+	gtk_source_undo_manager_end_not_undoable_action(undo_manager);
+#endif
+
 	g_custom_message("FManip [READ]", "File opened: %s", filename);
 	showfind = 0;
 	gtk_widget_hide(textbox_grid);

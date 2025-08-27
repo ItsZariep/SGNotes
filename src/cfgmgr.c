@@ -18,11 +18,9 @@ GtkWidget *gresizablewidgets;
 GtkWidget *ghideimgs;
 GtkWidget *gwrapfilelist;
 
-#ifndef WITHOUTSOURCEVIEW
 GtkWidget *glinenumbers;
 GtkWidget *ghighlightline;
 GtkWidget *geditortheme;
-#endif
 
 gchar notes_path[8192];
 
@@ -66,6 +64,7 @@ void on_geditortheme_clicked(void)
 	gtk_window_set_title(GTK_WINDOW(geditortheme_dialog), "Editor theme selector - SGNotes");
 	gtk_container_set_border_width(GTK_CONTAINER(geditortheme_dialog), 5);
 	window_set_icon(GTK_WINDOW(geditortheme_dialog), program_icon);
+	gtk_window_set_default_size(GTK_WINDOW(geditortheme_dialog), 500, 400);
 	gtk_window_set_position(GTK_WINDOW(geditortheme_dialog), GTK_WIN_POS_CENTER);
 	g_signal_connect(geditortheme_dialog, "destroy", G_CALLBACK(gtk_widget_destroy), geditortheme_dialog);
 
@@ -107,6 +106,7 @@ void on_geditortheme_clicked(void)
 		gtk_text_buffer_set_text(GTK_TEXT_BUFFER(source_buffer), buffertext, -1);
 		g_object_set_data_full(G_OBJECT(source_view), "scheme-id", g_strdup(scheme_ids[i]), g_free);
 		g_object_set_data_full(G_OBJECT(source_view), "scheme-name", g_strdup(scheme_name), g_free);
+		gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(source_view), GTK_WRAP_WORD_CHAR);
 		gtk_widget_set_name(source_view, scheme_ids[i]);
 		g_free(buffertext);
 
@@ -239,10 +239,10 @@ void showcfg(void)
 				gtk_widget_set_direction(gpermitoverwrite, GTK_TEXT_DIR_RTL);
 			gautosave = gtk_check_button_new_with_label("Auto save");
 				gtk_widget_set_direction(gautosave, GTK_TEXT_DIR_RTL);
-			gautosaverate_label = gtk_label_new("Autosave Rate");
+			gautosaverate_label = gtk_label_new("Autosave Rate (seconds)");
 				gtk_label_set_xalign(GTK_LABEL(gautosaverate_label), XA);
 				gtk_widget_set_margin_start(GTK_WIDGET(gautosaverate_label), XM);
-				GtkAdjustment *gautosaverate_adjustment = gtk_adjustment_new(1, 1, 60, 1, 1, 0);
+				GtkAdjustment *gautosaverate_adjustment = gtk_adjustment_new(1, 1, 3600, 1, 1, 0);
 				gautosaverate = gtk_spin_button_new(gautosaverate_adjustment, 1, 0);
 
 		GtkWidget *windowgrid = gtk_grid_new();
@@ -332,14 +332,16 @@ void showcfg(void)
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gautosave), autosave);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gwordwrap), wordwrap);
+#ifndef WITHOUTSOURCEVIEW
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(glinenumbers), linenumbers);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ghighlightline), highlightline);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(gwtheme), wtheme);
+#endif
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gpermitoverwrite), permitoverwrite);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gusecsd), usecsd);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gresizablewidgets), resizablewidgets);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ghideimgs), hideimgs);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gwrapfilelist), wrapfilelist);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(gwtheme), wtheme);
 
 	gchar *selectedfont = g_strdup_printf("%s %s %d", fontfamily, fontstyle, fontsize);
 
@@ -358,7 +360,9 @@ void showcfg(void)
 
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gautosaverate), autosaverate);
 
+#ifndef WITHOUTSOURCEVIEW
 	g_signal_connect(geditortheme, "clicked", G_CALLBACK(on_geditortheme_clicked), NULL);
+#endif
 	g_signal_connect(gautosave, "clicked", G_CALLBACK(toggleautosave), NULL);
 	g_signal_connect(defbtn, "clicked", G_CALLBACK(updateconf), GINT_TO_POINTER(1));
 	g_signal_connect(okbtn, "clicked", G_CALLBACK(updateconf), GINT_TO_POINTER(0));
