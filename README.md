@@ -2,6 +2,11 @@
 
 Simple GTK Notes App
 
+> [!WARNING]
+> ## Project Moved to [codeberg](https://codeberg.org/itszariep/sgnotes)
+> [![Get in on Codeberg](https://codeberg.org/ItsZariep/.profile/raw/branch/main/movedtocodeberg.webp)](https://codeberg.org/itszariep/sgnotes)
+
+
 [![Packaging status](https://repology.org/badge/vertical-allrepos/sgnotes.svg)](https://repology.org/project/sgnotes/versions)
 
 ## Features:
